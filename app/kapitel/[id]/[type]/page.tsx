@@ -16,6 +16,7 @@ import { CodeAnalysisExercise } from "@/components/exercises/code-analysis-exerc
 import { Spinner } from "@/components/ui/spinner"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, RefreshCw, AlertCircle } from "lucide-react"
+import { getApiErrorMessage } from "@/lib/api-errors"
 import type { User } from "@supabase/supabase-js"
 
 const TYPE_LABELS: Record<string, string> = {
@@ -61,7 +62,7 @@ export default function ExercisePage() {
       if (data.error) throw new Error(data.error)
       setExercise(data)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erreur API')
+      setError(getApiErrorMessage(e instanceof Error ? e.message : 'Erreur API'))
     } finally {
       setLoading(false)
     }
@@ -159,16 +160,28 @@ export default function ExercisePage() {
 
       {/* Error state */}
       {error && (
-        <Alert variant="destructive">
-          <AlertCircle />
-          <AlertTitle>Erreur de génération</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-          <div className="mt-2">
-            <Button onClick={() => loadExercise()} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" /> Réessayer
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-destructive">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex gap-3">
+              <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-destructive/10">
+                <AlertCircle className="h-4 w-4" />
+              </span>
+              <div className="space-y-1">
+                <p className="font-semibold">Impossible de générer l&apos;exercice</p>
+                <p className="max-w-2xl text-sm leading-6 text-destructive/85">{error}</p>
+              </div>
+            </div>
+            <Button
+              onClick={() => loadExercise()}
+              variant="outline"
+              size="sm"
+              className="w-full border-destructive/30 text-destructive hover:bg-destructive/10 sm:w-auto"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Réessayer
             </Button>
           </div>
-        </Alert>
+        </div>
       )}
       {progressError && (
         <Alert>

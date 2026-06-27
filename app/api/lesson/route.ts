@@ -1,8 +1,12 @@
 import { CHAPTERS } from '@/lib/chapters'
+import { getApiErrorMessage } from '@/lib/api-errors'
 
 export async function POST(req: Request) {
   if (!process.env.ANTHROPIC_API_KEY) {
-    return Response.json({ error: 'ANTHROPIC_API_KEY manquante côté serveur' }, { status: 500 })
+    return Response.json(
+      { error: getApiErrorMessage('ANTHROPIC_API_KEY') },
+      { status: 500 }
+    )
   }
 
   const { chapterId } = await req.json()

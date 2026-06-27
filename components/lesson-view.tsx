@@ -8,6 +8,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { CodeBlock } from "@/components/code-block"
 import { Snippet } from "@/components/snippet"
 import { AlertCircleIcon, AlertTriangle, BookOpen, CheckCircle2, ChevronDown, RefreshCw } from "lucide-react"
+import { getApiErrorMessage } from "@/lib/api-errors"
 
 const isShellCmd = (code: string) =>
   /^(\$\s+|javac\s|java\s|mvn\s|gradle\s|jar\s)/.test(code.trim())
@@ -59,7 +60,7 @@ export function LessonView({ chapterId }: Props) {
       setLesson(data)
       sessionStorage.setItem(storageKey, JSON.stringify(data))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erreur')
+      setError(getApiErrorMessage(e instanceof Error ? e.message : 'Erreur'))
     } finally {
       setLoading(false)
     }
@@ -104,11 +105,19 @@ export function LessonView({ chapterId }: Props) {
         )}
 
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="items-center gap-3 p-3 sm:grid-cols-[auto_1fr_auto]">
             <AlertCircleIcon />
-            <AlertDescription>{error}</AlertDescription>
-            <AlertAction>
-              <Button variant="outline" size="xs" onClick={loadLesson}>Réessayer</Button>
+            <AlertDescription className="text-sm leading-6">{error}</AlertDescription>
+            <AlertAction className="static mt-2 sm:mt-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadLesson}
+                className="w-full border-destructive/30 text-destructive hover:bg-destructive/10 sm:w-auto"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Réessayer
+              </Button>
             </AlertAction>
           </Alert>
         )}
