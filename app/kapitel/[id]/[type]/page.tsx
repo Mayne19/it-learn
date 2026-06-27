@@ -37,6 +37,7 @@ export default function ExercisePage() {
   const [exercise, setExercise] = useState<Record<string, unknown> | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [progressError, setProgressError] = useState("")
   const [fillBlankMode, setFillBlankMode] = useState<'assisted' | 'free' | null>(
     exerciseType !== 'fillBlank' ? 'assisted' : null
   )
@@ -83,10 +84,15 @@ export default function ExercisePage() {
 
   const handleResult = async (correct: boolean) => {
     setScore(s => ({ correct: s.correct + (correct ? 1 : 0), total: s.total + 1 }))
-    if (isSupabaseConfigured() && user) {
-      await updateProgress(user.id, chapterId, exerciseType, correct)
-    } else {
-      localUpdateProgress(chapterId, exerciseType, correct)
+    setProgressError("")
+    try {
+      if (isSupabaseConfigured() && user) {
+        await updateProgress(user.id, chapterId, exerciseType, correct)
+      } else {
+        localUpdateProgress(chapterId, exerciseType, correct)
+      }
+    } catch (error) {
+      setProgressError(error instanceof Error ? error.message : "Progression non enregistrée")
     }
   }
 
@@ -162,6 +168,13 @@ export default function ExercisePage() {
               <RefreshCw className="h-4 w-4 mr-2" /> Réessayer
             </Button>
           </div>
+        </Alert>
+      )}
+      {progressError && (
+        <Alert>
+          <AlertCircle />
+          <AlertTitle>Progression non enregistrée</AlertTitle>
+          <AlertDescription>{progressError}</AlertDescription>
         </Alert>
       )}
 

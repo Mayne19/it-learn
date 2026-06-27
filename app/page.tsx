@@ -24,6 +24,7 @@ interface ProgressRow {
 export default function HomePage() {
   const [progress, setProgress] = useState<ProgressRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [progressError, setProgressError] = useState("")
   const router = useRouter()
 
   useEffect(() => {
@@ -39,8 +40,12 @@ export default function HomePage() {
           setLoading(false)
           return
         }
-        const rows = await getProgress(data.user.id)
-        setProgress(rows as ProgressRow[])
+        try {
+          const rows = await getProgress(data.user.id)
+          setProgress(rows as ProgressRow[])
+        } catch (error) {
+          setProgressError(error instanceof Error ? error.message : "Progression indisponible")
+        }
         setLoading(false)
       })
     })
@@ -91,6 +96,11 @@ export default function HomePage() {
           </div>
         </CardContent>
       </Card>
+      {progressError && (
+        <p className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-muted-foreground">
+          {progressError}
+        </p>
+      )}
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">

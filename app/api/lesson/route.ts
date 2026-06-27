@@ -1,6 +1,10 @@
 import { CHAPTERS } from '@/lib/chapters'
 
 export async function POST(req: Request) {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return Response.json({ error: 'ANTHROPIC_API_KEY manquante côté serveur' }, { status: 500 })
+  }
+
   const { chapterId } = await req.json()
   const chapter = CHAPTERS.find(c => c.id === chapterId)
   if (!chapter) return Response.json({ error: 'Chapitre non trouvé' }, { status: 404 })
@@ -50,6 +54,13 @@ Antworte AUSSCHLIESSLICH mit gültigem JSON. Kein Markdown, keine Backticks.
   })
 
   const data = await res.json()
+  if (!res.ok) {
+    return Response.json(
+      { error: data.error?.message ?? 'Erreur Anthropic' },
+      { status: res.status }
+    )
+  }
+
   const text = data.content?.[0]?.text ?? ''
   const start = text.indexOf('{')
   const end = text.lastIndexOf('}')

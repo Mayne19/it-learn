@@ -31,10 +31,15 @@ export const supabase = new Proxy({} as SupabaseClient, {
 })
 
 export async function getProgress(userId: string) {
-  const { data } = await getSupabaseClient()
+  const { data, error } = await getSupabaseClient()
     .from('progress')
     .select('*')
     .eq('user_id', userId)
+
+  if (error) {
+    throw new Error(`Impossible de charger la progression: ${error.message}`)
+  }
+
   return data ?? []
 }
 
@@ -44,10 +49,14 @@ export async function updateProgress(
   exerciseType: string,
   correct: boolean
 ) {
-  await getSupabaseClient().rpc('upsert_progress', {
+  const { error } = await getSupabaseClient().rpc('upsert_progress', {
     p_user_id: userId,
     p_chapter_id: chapterId,
     p_exercise_type: exerciseType,
     p_correct: correct ? 1 : 0
   })
+
+  if (error) {
+    throw new Error(`Impossible d'enregistrer la progression: ${error.message}`)
+  }
 }

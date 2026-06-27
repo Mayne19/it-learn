@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Java Lernen
 
-## Getting Started
+Plateforme de révision Java avec exercices générés par IA, progression utilisateur et thème Geist/Vercel.
 
-First, run the development server:
+## Variables d'environnement
+
+Configure ces variables dans `.env.local` en local et dans Vercel en production:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+ANTHROPIC_API_KEY=...
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`ANTHROPIC_API_KEY` reste côté serveur. Les deux variables `NEXT_PUBLIC_SUPABASE_*` sont les valeurs publiques Supabase nécessaires au client.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Base de données Supabase
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Avant d'utiliser l'app en ligne avec progression persistante, applique la migration:
 
-## Learn More
+```bash
+supabase db push
+```
 
-To learn more about Next.js, take a look at the following resources:
+Ou copie le SQL de `supabase/migrations/0001_progress.sql` dans l'éditeur SQL Supabase.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+La migration crée:
+- la table `public.progress`
+- les politiques RLS pour que chaque utilisateur lise/modifie uniquement sa progression
+- la fonction RPC `public.upsert_progress`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Auth Supabase
 
-## Deploy on Vercel
+Dans Supabase, ajoute l'URL de production Vercel dans:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`Authentication > URL Configuration`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Renseigne:
+- `Site URL`: l'URL de production
+- `Redirect URLs`: l'URL de production et l'URL locale si besoin, par exemple `http://localhost:3000`
+
+## Développement
+
+```bash
+pnpm install
+pnpm dev
+```
+
+## Vérifications
+
+```bash
+pnpm lint
+pnpm build
+```

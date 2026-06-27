@@ -36,6 +36,7 @@ export default function ChapterPage() {
   const chapter = CHAPTERS.find(c => c.id === chapterId)
 
   const [progress, setProgress] = useState<ProgressRow[]>([])
+  const [progressError, setProgressError] = useState("")
 
   useEffect(() => {
     Promise.resolve().then(() => {
@@ -48,8 +49,12 @@ export default function ChapterPage() {
           setProgress(localGetProgress().filter((r: ProgressRow) => r.chapter_id === chapterId))
           return
         }
-        const rows = await getProgress(data.user.id)
-        setProgress((rows as ProgressRow[]).filter(r => r.chapter_id === chapterId))
+        try {
+          const rows = await getProgress(data.user.id)
+          setProgress((rows as ProgressRow[]).filter(r => r.chapter_id === chapterId))
+        } catch (error) {
+          setProgressError(error instanceof Error ? error.message : "Progression indisponible")
+        }
       })
     })
   }, [router, chapterId])
@@ -101,6 +106,11 @@ export default function ChapterPage() {
           )}
         </CardContent>
       </Card>
+      {progressError && (
+        <p className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-muted-foreground">
+          {progressError}
+        </p>
+      )}
 
       {/* Java quick commands — Snippet */}
       <section className="space-y-2">

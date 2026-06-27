@@ -5,24 +5,42 @@ import { ThemeSwitcher } from "@/components/theme-switcher"
 import { Button } from "@/components/ui/button"
 import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
-import { BookOpen, LogOut } from "lucide-react"
+import { BookOpen, LogIn, LogOut } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 
 export function Header() {
   const [user, setUser] = useState<User | null>(null)
+  const [authChecked, setAuthChecked] = useState(false)
+  const supabaseConfigured = isSupabaseConfigured()
   const router = useRouter()
 
   useEffect(() => {
-    if (!isSupabaseConfigured()) return
-    try {
-      const client = getSupabaseClient()
-      client.auth.getUser().then(({ data }) => setUser(data.user))
-      const { data: { subscription } } = client.auth.onAuthStateChange((_, session) => {
-        setUser(session?.user ?? null)
-      })
-      return () => subscription.unsubscribe()
-    } catch { /* Supabase not configured */ }
-  }, [])
+    if (!supabaseConfigured) {
+      Promise.resolve().then(() => setAuthChecked(true))
+      return
+    }
+
+    let subscription: { unsubscribe: () => void } | undefined
+
+    Promise.resolve().then(() => {
+      try {
+        const client = getSupabaseClient()
+        client.auth.getUser().then(({ data }) => {
+          setUser(data.user)
+          setAuthChecked(true)
+        })
+        const { data } = client.auth.onAuthStateChange((_, session) => {
+          setUser(session?.user ?? null)
+          setAuthChecked(true)
+        })
+        subscription = data.subscription
+      } catch {
+        setAuthChecked(true)
+      }
+    })
+
+    return () => subscription?.unsubscribe()
+  }, [supabaseConfigured])
 
   const handleLogout = async () => {
     try { await getSupabaseClient().auth.signOut() } catch { /* ignore */ }
@@ -38,6 +56,12 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-3">
+          {authChecked && supabaseConfigured && !user && (
+            <Button variant="outline" size="sm" onClick={() => router.push("/login")}>
+              <LogIn className="h-4 w-4" />
+              <span className="hidden sm:inline">Connexion</span>
+            </Button>
+          )}
           {user && (
             <>
               <span className="text-xs text-muted-foreground hidden sm:block truncate max-w-[140px]">
