@@ -26,9 +26,11 @@ export default function LoginPage() {
       return
     }
 
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, "")
+
     const { error } = await getSupabaseClient().auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/` }
+      options: { emailRedirectTo: `${siteUrl}/` }
     })
 
     if (error) {
