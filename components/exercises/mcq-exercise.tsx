@@ -6,6 +6,7 @@ import { CodeBlock } from "@/components/code-block"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, XCircle, Flag } from "lucide-react"
 import { cn } from "@/lib/utils"
+import type { Lang } from "@/lib/chapters/types"
 
 interface MCQData {
   question: string
@@ -19,12 +20,13 @@ interface MCQData {
 
 interface Props {
   data: MCQData
+  lang?: Lang
   onResult: (correct: boolean) => void
   onNext: () => void
   onBack: () => void
 }
 
-export function MCQExercise({ data, onResult, onNext, onBack }: Props) {
+export function MCQExercise({ data, lang, onResult, onNext, onBack }: Props) {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [submitted, setSubmitted] = useState(false)
   const [showFr, setShowFr] = useState(false)
@@ -66,7 +68,7 @@ export function MCQExercise({ data, onResult, onNext, onBack }: Props) {
       <p className="text-lg font-medium leading-snug text-balance">{data.question}</p>
 
       {data.code && (
-        <CodeBlock code={data.code} />
+        <CodeBlock code={data.code} lang={lang} />
       )}
 
       <div className="space-y-2">

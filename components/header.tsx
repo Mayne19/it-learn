@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { ThemeSwitcher } from "@/components/theme-switcher"
 import { Button } from "@/components/ui/button"
 import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase"
@@ -50,10 +51,10 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-card/80 backdrop-blur">
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
           <BookOpen className="h-5 w-5 text-primary" />
-          <span className="font-bold text-lg">Java Lernen</span>
-        </div>
+          <span className="font-bold text-lg">IT Lernen</span>
+        </Link>
 
         <div className="flex items-center gap-3">
           {authChecked && supabaseConfigured && !user && (

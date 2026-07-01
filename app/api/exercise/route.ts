@@ -1,4 +1,4 @@
-import { CHAPTERS } from '@/lib/chapters'
+import { getChapter } from '@/lib/courses'
 import { buildPrompt } from '@/lib/prompts'
 import { getApiErrorMessage } from '@/lib/api-errors'
 
@@ -10,8 +10,8 @@ export async function POST(req: Request) {
     )
   }
 
-  const { chapterId, exerciseType, fillBlankMode } = await req.json()
-  const chapter = CHAPTERS.find(c => c.id === chapterId)
+  const { courseId, chapterId, exerciseType, fillBlankMode } = await req.json()
+  const chapter = getChapter(courseId, chapterId)
   if (!chapter) return Response.json({ error: 'Chapitre non trouvé' }, { status: 404 })
 
   const prompt = buildPrompt(chapter, exerciseType, fillBlankMode)

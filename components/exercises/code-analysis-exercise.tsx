@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { CodeBlock } from "@/components/code-block"
 import { CheckCircle2, XCircle } from "lucide-react"
+import type { Lang } from "@/lib/chapters/types"
 
 interface CodeAnalysisData {
   code: string
@@ -18,12 +19,13 @@ interface CodeAnalysisData {
 
 interface Props {
   data: CodeAnalysisData
+  lang?: Lang
   onResult: (correct: boolean) => void
   onNext: () => void
   onBack: () => void
 }
 
-export function CodeAnalysisExercise({ data, onResult, onNext, onBack }: Props) {
+export function CodeAnalysisExercise({ data, lang, onResult, onNext, onBack }: Props) {
   const [answer, setAnswer] = useState("")
   const [submitted, setSubmitted] = useState(false)
   const [selfEval, setSelfEval] = useState<boolean | null>(null)
@@ -48,7 +50,7 @@ export function CodeAnalysisExercise({ data, onResult, onNext, onBack }: Props) 
         <p className="text-sm text-muted-foreground mb-1">
           Zeile <strong className="text-warning">{data.target_line}</strong> ist hervorgehoben:
         </p>
-        <CodeBlock code={data.code} highlightLine={data.target_line} />
+        <CodeBlock code={data.code} lang={lang} highlightLine={data.target_line} />
       </div>
 
       <div className="rounded-lg border border-border bg-muted/20 p-4">

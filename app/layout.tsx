@@ -10,8 +10,8 @@ const fontHeading = Geist({ subsets: ["latin"], variable: "--font-heading" })
 const fontMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono", weight: ["400"] })
 
 export const metadata: Metadata = {
-  title: "Java Lernen — Révision Java",
-  description: "Plateforme de révision Java pour l'examen en Allemagne",
+  title: "IT Lernen — Java & Langages dynamiques",
+  description: "Plateforme de révision multi-cours (Java, Python, Perl, JavaScript) pour vos examens en Allemagne",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

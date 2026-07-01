@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { CodeBlock } from "@/components/code-block"
 import { CheckCircle2, XCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import type { Lang } from "@/lib/chapters/types"
 
 interface Statement {
   text: string
@@ -20,12 +21,13 @@ interface TrueFalseData {
 
 interface Props {
   data: TrueFalseData
+  lang?: Lang
   onResult: (correct: boolean) => void
   onNext: () => void
   onBack: () => void
 }
 
-export function TrueFalseExercise({ data, onResult, onNext, onBack }: Props) {
+export function TrueFalseExercise({ data, lang, onResult, onNext, onBack }: Props) {
   const [answers, setAnswers] = useState<Record<number, boolean | null>>(
     Object.fromEntries(data.statements.map((_, i) => [i, null]))
   )
@@ -66,7 +68,7 @@ export function TrueFalseExercise({ data, onResult, onNext, onBack }: Props) {
               )}
             >
               <p className="text-sm font-medium">{stmt.text}</p>
-              {stmt.code && <CodeBlock code={stmt.code} />}
+              {stmt.code && <CodeBlock code={stmt.code} lang={lang} />}
 
               <div className="flex flex-col gap-2 min-[420px]:flex-row">
                 <button

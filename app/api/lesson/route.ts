@@ -1,4 +1,5 @@
-import { CHAPTERS } from '@/lib/chapters'
+import { getChapter } from '@/lib/courses'
+import { getLangLabel } from '@/lib/lang'
 import { getApiErrorMessage } from '@/lib/api-errors'
 
 export async function POST(req: Request) {
@@ -9,11 +10,13 @@ export async function POST(req: Request) {
     )
   }
 
-  const { chapterId } = await req.json()
-  const chapter = CHAPTERS.find(c => c.id === chapterId)
+  const { courseId, chapterId } = await req.json()
+  const chapter = getChapter(courseId, chapterId)
   if (!chapter) return Response.json({ error: 'Chapitre non trouvé' }, { status: 404 })
 
-  const prompt = `Tu es un professeur Java expert. Génère un mini-cours de révision très concis (3 minutes maximum) sur le chapitre "${chapter.de}" (${chapter.fr}).
+  const langLabel = getLangLabel(chapter.lang)
+
+  const prompt = `Tu es un professeur ${langLabel} expert. Génère un mini-cours de révision très concis (3 minutes maximum) sur le chapitre "${chapter.de}" (${chapter.fr}).
 
 Concepts clés à couvrir : ${chapter.concepts.join(', ')}
 Résumé du chapitre : ${chapter.summary}
@@ -31,7 +34,7 @@ Antworte AUSSCHLIESSLICH mit gültigem JSON. Kein Markdown, keine Backticks.
       "heading_de": "Titre de section en allemand",
       "content_de": "Explication en allemand (1-2 phrases, vocabulaire d'examen)",
       "content_fr": "Même explication en français (1-2 phrases)",
-      "code": "Exemple de code Java illustratif (ou null si pas pertinent)"
+      "code": "Exemple de code ${langLabel} illustratif (ou null si pas pertinent)"
     }
   ],
   "key_points_de": ["Point clé 1 en allemand", "Point clé 2"],

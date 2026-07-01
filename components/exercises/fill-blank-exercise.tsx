@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { CodeBlock } from "@/components/code-block"
 import { CheckCircle2, XCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import type { Lang } from "@/lib/chapters/types"
 
 const stableHash = (value: string) => {
   let hash = 0
@@ -32,12 +33,13 @@ interface FillBlankData {
 
 interface Props {
   data: FillBlankData
+  lang?: Lang
   onResult: (correct: boolean) => void
   onNext: () => void
   onBack: () => void
 }
 
-export function FillBlankExercise({ data, onResult, onNext, onBack }: Props) {
+export function FillBlankExercise({ data, lang, onResult, onNext, onBack }: Props) {
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>(
     Object.fromEntries(data.blanks.map(b => [b.id, '']))
   )
@@ -98,6 +100,7 @@ export function FillBlankExercise({ data, onResult, onNext, onBack }: Props) {
 
       <CodeBlock
         code={data.code}
+        lang={lang}
         renderBlanks={(id) => {
           const filled = userAnswers[id]
           const correct = submitted && isBlankCorrect(id)

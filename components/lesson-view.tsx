@@ -9,9 +9,10 @@ import { CodeBlock } from "@/components/code-block"
 import { Snippet } from "@/components/snippet"
 import { AlertCircleIcon, AlertTriangle, BookOpen, CheckCircle2, ChevronDown, RefreshCw } from "lucide-react"
 import { getApiErrorMessage } from "@/lib/api-errors"
+import type { Lang } from "@/lib/chapters/types"
 
 const isShellCmd = (code: string) =>
-  /^(\$\s+|javac\s|java\s|mvn\s|gradle\s|jar\s)/.test(code.trim())
+  /^(\$\s+|javac\s|java\s|python3?\s|perl\s|node\s|npm\s|pip3?\s|mvn\s|gradle\s|jar\s)/.test(code.trim())
 
 interface LessonSection {
   heading_de: string
@@ -34,17 +35,19 @@ interface Lesson {
 }
 
 interface Props {
+  courseId: string
   chapterId: number
+  lang: Lang
 }
 
-export function LessonView({ chapterId }: Props) {
+export function LessonView({ courseId, chapterId, lang }: Props) {
   const [open, setOpen] = useState(false)
   const [lesson, setLesson] = useState<Lesson | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [showFr, setShowFr] = useState(false)
 
-  const storageKey = `lesson-${chapterId}`
+  const storageKey = `lesson-${courseId}-${chapterId}`
 
   const loadLesson = useCallback(async () => {
     setLoading(true)
@@ -53,7 +56,7 @@ export function LessonView({ chapterId }: Props) {
       const res = await fetch('/api/lesson', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chapterId })
+        body: JSON.stringify({ courseId, chapterId })
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
@@ -64,7 +67,7 @@ export function LessonView({ chapterId }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [chapterId, storageKey])
+  }, [courseId, chapterId, storageKey])
 
   useEffect(() => {
     if (!open || lesson) return
@@ -139,7 +142,7 @@ export function LessonView({ chapterId }: Props) {
                   {section.code && (
                     isShellCmd(section.code)
                       ? <Snippet text={section.code.trim().replace(/^\$\s*/, '')} />
-                      : <CodeBlock code={section.code} />
+                      : <CodeBlock code={section.code} lang={lang} />
                   )}
                 </div>
               ))}

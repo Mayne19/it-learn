@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { CodeBlock } from "@/components/code-block"
 import { CheckCircle2, XCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import type { Lang } from "@/lib/chapters/types"
 
 const stableHash = (value: string) => {
   let hash = 0
@@ -29,12 +30,13 @@ interface MatchingData {
 
 interface Props {
   data: MatchingData
+  lang?: Lang
   onResult: (correct: boolean) => void
   onNext: () => void
   onBack: () => void
 }
 
-export function MatchingExercise({ data, onResult, onNext, onBack }: Props) {
+export function MatchingExercise({ data, lang, onResult, onNext, onBack }: Props) {
   const [assignments, setAssignments] = useState<Record<number, number | null>>(
     Object.fromEntries(data.elements.map(e => [e.id, null]))
   )
@@ -89,6 +91,7 @@ export function MatchingExercise({ data, onResult, onNext, onBack }: Props) {
 
       <CodeBlock
         code={data.code}
+        lang={lang}
         renderMarkers={(id) => (
           <button
             onClick={() => handleSlotClick(id)}

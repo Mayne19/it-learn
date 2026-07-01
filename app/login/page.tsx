@@ -48,9 +48,9 @@ export default function LoginPage() {
           <div className="flex justify-center mb-2">
             <BookOpen className="h-10 w-10 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Java Lernen</CardTitle>
+          <CardTitle className="text-2xl">IT Lernen</CardTitle>
           <CardDescription>
-            Plateforme de révision Java pour votre examen en Allemagne
+            Plateforme de révision Java & langages dynamiques pour vos examens en Allemagne
           </CardDescription>
         </CardHeader>
         <CardContent>

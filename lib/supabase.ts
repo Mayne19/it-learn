@@ -45,12 +45,14 @@ export async function getProgress(userId: string) {
 
 export async function updateProgress(
   userId: string,
+  courseId: string,
   chapterId: number,
   exerciseType: string,
   correct: boolean
 ) {
   const { error } = await getSupabaseClient().rpc('upsert_progress', {
     p_user_id: userId,
+    p_course_id: courseId,
     p_chapter_id: chapterId,
     p_exercise_type: exerciseType,
     p_correct: correct ? 1 : 0
