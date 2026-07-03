@@ -15,6 +15,7 @@ export async function POST(req: Request) {
   if (!chapter) return Response.json({ error: 'Chapitre non trouvé' }, { status: 404 })
 
   const langLabel = getLangLabel(chapter.lang)
+  const hasCode = chapter.hasCode !== false
 
   const prompt = `Tu es un professeur ${langLabel} expert. Génère un mini-cours de révision très concis (3 minutes maximum) sur le chapitre "${chapter.de}" (${chapter.fr}).
 
@@ -22,7 +23,8 @@ Concepts clés à couvrir : ${chapter.concepts.join(', ')}
 Résumé du chapitre : ${chapter.summary}
 
 Le cours doit être utile pour un étudiant francophone qui passe un examen en Allemagne.
-Reste court: exactement 2 sections maximum, 1 exemple de code maximum, phrases directes, pas de développement long.
+Reste court: exactement 2 sections maximum, ${hasCode ? '1 exemple de code maximum' : 'aucun exemple de code'}, phrases directes, pas de développement long.
+${hasCode ? '' : 'Ce chapitre a KEINEN Code: le champ "code" doit toujours être null et les exemples doivent porter sur des concepts, définitions, méthodes et outils.'}
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON. Kein Markdown, keine Backticks.
 
@@ -34,7 +36,7 @@ Antworte AUSSCHLIESSLICH mit gültigem JSON. Kein Markdown, keine Backticks.
       "heading_de": "Titre de section en allemand",
       "content_de": "Explication en allemand (1-2 phrases, vocabulaire d'examen)",
       "content_fr": "Même explication en français (1-2 phrases)",
-      "code": "Exemple de code ${langLabel} illustratif (ou null si pas pertinent)"
+      "code": ${hasCode ? `"Exemple de code ${langLabel} illustratif (ou null si pas pertinent)"` : "null"}
     }
   ],
   "key_points_de": ["Point clé 1 en allemand", "Point clé 2"],

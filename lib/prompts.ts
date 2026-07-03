@@ -21,7 +21,19 @@ const DYNAMIC_LANG_TRAPS = `- dynamische vs. statische Typisierung (Laufzeit vs.
 - try/except/else/finally — wann wird was ausgeführt?
 - Cursor vs. Connection bei Datenbankzugriff`
 
+const PROJECT_MANAGEMENT_TRAPS = `- EV vs. PV vs. AC (Earned Value Verwechslung)
+- CV = EV-AC vs. SV = EV-PV (Vorzeichen und Bedeutung)
+- RACI: nur EINER kann Accountable sein
+- Kritischer Pfad = Gesamtpuffer 0 (nicht der längste schlechthin)
+- Product Owner vs. Scrum Master (Rollen verwechseln)
+- Forming/Storming/Norming/Performing (falsche Reihenfolge)
+- PSP Bottom-Up vs. Top-Down (Unterschied)
+- Macht-Interesse-Raster: 4 Strategien richtig zuordnen
+- PERT-Formel: (O + 4W + P) / 6
+- Salienzmodell: Macht + Legitimität + Dringlichkeit`
+
 function trapsFor(lang: Lang): string {
+  if (lang === "none") return PROJECT_MANAGEMENT_TRAPS
   return lang === "java" ? JAVA_TRAPS : DYNAMIC_LANG_TRAPS
 }
 
@@ -30,7 +42,7 @@ function trapsFor(lang: Lang): string {
 // structure) should only ever get trivial CLI/one-liner code.
 function codeConstraintFor(chapter: Chapter, langLabel: string): string {
   if (chapter.hasCode === false) {
-    return `\nWICHTIG: Dieses Kapitel behandelt noch KEINEN Code. Generiere NIEMALS ${langLabel}-Code (auch nicht als optionales Feld) — arbeite ausschließlich mit Fachbegriffen, Definitionen und Konzepten aus diesem Kapitel.\n`
+    return `\nWICHTIG: Dieses Kapitel hat KEINEN Code. Keine ${langLabel}-Codebeispiele verwenden. Alle Fragen beziehen sich auf Konzepte, Definitionen, Methoden und Werkzeuge. Das Feld "code" muss null sein, außer bei Lückentext-Aufgaben, wo es einen beschreibenden Text mit Lücken enthalten darf.\n`
   }
   if (chapter.simpleCodeOnly) {
     return `\nWICHTIG: Dieses Kapitel ist sehr grundlegend. Verwende nur sehr einfachen Code: Kommandozeilenbefehle oder elementarste Syntax-Beispiele (keine Klassen, Schleifen, Funktionen oder andere komplexe Konstrukte).\n`
@@ -59,6 +71,28 @@ export function buildPrompt(chapter: Chapter, exerciseType: string, fillBlankMod
 
   switch (exerciseType) {
     case "mcq":
+      if (!hasCode && chapter.lang === "none") {
+        return `${ctx}
+
+Erstelle eine Projektmanagement Multiple-Choice-Frage auf Deutsch.
+Keine Codebeispiele. Fragen zu: Definitionen, Formeln, Werkzeugen, Prozessen, Rollen, Methoden.
+Wähle ZUFÄLLIG eine dieser Varianten:
+- 1 richtige Antwort von 4
+- 2 richtige Antworten von 4
+- Finde die FALSCHE Aussage
+
+Antworte mit diesem JSON:
+{
+  "question": "Frage auf Deutsch",
+  "code": null,
+  "options": ["A: ...", "B: ...", "C: ...", "D: ..."],
+  "correct_indices": [0],
+  "trap": "Verwechslungsgefahr",
+  "explanation_de": "Erklärung auf Deutsch",
+  "explanation_fr": "Explication en français"
+}`
+      }
+
       return `${ctx}
 
 Erstelle eine Multiple-Choice-Frage über "${chapter.de}" auf Deutsch.
@@ -81,6 +115,25 @@ Antworte mit diesem JSON:
 }`
 
     case "matching":
+      if (!hasCode) {
+        return `${ctx}
+
+Erstelle eine Zuordnungsaufgabe ohne Code.
+Zeige 4 Begriffe, die Definitionen zugeordnet werden müssen.
+Nutze je nach Kapitel Projektmanagement-Begriffe, Rollen und Verantwortlichkeiten, Formeln und Bedeutung, Werkzeuge und Zweck oder Prozessschritte und Beschreibung.
+
+Antworte mit diesem JSON:
+{
+  "instruction": "Ordne die Begriffe den richtigen Definitionen zu",
+  "code": null,
+  "items_left": ["Begriff 1", "Begriff 2", "Begriff 3", "Begriff 4"],
+  "items_right": ["Definition A", "Definition B", "Definition C", "Definition D"],
+  "correct_pairs": [[0,"A"], [1,"C"], [2,"B"], [3,"D"]],
+  "explanation_de": "Erklärung auf Deutsch",
+  "explanation_fr": "Explication en français"
+}`
+      }
+
       return `${ctx}
 
 Erstelle eine Zuordnungsübung über "${chapter.de}".
@@ -172,6 +225,16 @@ Antworte mit diesem JSON:
     }
 
     case "codeAnalysis":
+      if (!hasCode) {
+        return `${ctx}
+
+Code-Analyse ist für dieses Kapitel nicht verfügbar, weil es keinen Code enthält.
+Antworte mit diesem JSON:
+{
+  "error": "Code-Analyse ist für dieses Kapitel nicht verfügbar."
+}`
+      }
+
       return `${ctx}
 
 Erstelle eine Code-Analyse-Übung über "${chapter.de}".

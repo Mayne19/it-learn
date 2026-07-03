@@ -153,7 +153,21 @@ export default function CoursePage() {
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <Badge variant="secondary" className="text-xs">#{chapter.id}</Badge>
-                      <StatusDot state={dotState} />
+                      <div className="flex items-center gap-1.5">
+                        {typeof chapter.klausurRelevant === "boolean" && (
+                          <Badge
+                            variant="outline"
+                            className={
+                              chapter.klausurRelevant
+                                ? "border-warning/35 bg-warning/10 text-warning text-[11px]"
+                                : "border-border bg-muted/45 text-muted-foreground text-[11px]"
+                            }
+                          >
+                            {chapter.klausurRelevant ? "⭐ Klausur" : "Vertiefung"}
+                          </Badge>
+                        )}
+                        <StatusDot state={dotState} />
+                      </div>
                     </div>
                     <p className="text-sm font-semibold leading-tight mb-1">{chapter.de}</p>
                     <p className="text-xs text-muted-foreground leading-tight mb-2">{chapter.fr}</p>

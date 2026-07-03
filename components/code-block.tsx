@@ -74,11 +74,19 @@ const JAVASCRIPT_SPEC: LangSpec = {
   ]),
 }
 
+const TEXT_SPEC: LangSpec = {
+  commentPrefix: "#",
+  keywords: new Set([]),
+  constants: new Set([]),
+  types: new Set([]),
+}
+
 const SPECS: Record<Lang, LangSpec> = {
   java: JAVA_SPEC,
   python: PYTHON_SPEC,
   perl: PERL_SPEC,
   javascript: JAVASCRIPT_SPEC,
+  none: TEXT_SPEC,
 }
 
 // Token pattern is identical for every language except the line-comment marker.

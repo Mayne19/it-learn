@@ -1,4 +1,4 @@
-export type Lang = "java" | "python" | "perl" | "javascript"
+export type Lang = "java" | "python" | "perl" | "javascript" | "none"
 
 export interface Chapter {
   id: number
@@ -11,4 +11,6 @@ export interface Chapter {
   hasCode: boolean
   /** True for chapters that do have code but only very basic syntax/CLI commands. */
   simpleCodeOnly?: boolean
+  /** True when this chapter is part of the exam-focused topic set. */
+  klausurRelevant?: boolean
 }

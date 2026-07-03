@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Gauge } from "@/components/gauge"
-import { BookOpen, Coffee, Sparkles, Zap } from "lucide-react"
+import { BookOpen, ClipboardList, Coffee, Sparkles, Zap } from "lucide-react"
 
 interface ProgressRow {
   course_id: string
@@ -22,11 +22,13 @@ interface ProgressRow {
 const COURSE_ICON: Record<string, typeof Coffee> = {
   java: Coffee,
   dynsprachen: Zap,
+  projektmanagement: ClipboardList,
 }
 
 const COURSE_TONE: Record<string, string> = {
   java: "text-ring bg-ring/10",
   dynsprachen: "text-warning bg-warning/10",
+  projektmanagement: "text-success bg-success/10",
 }
 
 export default function HomePage() {

@@ -1,5 +1,6 @@
 import { JAVA_CHAPTERS } from "./chapters/java"
 import { DYNSPRACHEN_CHAPTERS } from "./chapters/dynsprachen"
+import { PROJEKTMANAGEMENT_CHAPTERS } from "./chapters/projektmanagement"
 import type { Chapter } from "./chapters/types"
 
 export interface Course {
@@ -24,6 +25,13 @@ export const COURSES: Course[] = [
     de: "Dynamische Sprachen",
     description_fr: "Python, Perl et JavaScript — typage dynamique, du script au web.",
     chapters: DYNSPRACHEN_CHAPTERS,
+  },
+  {
+    id: "projektmanagement",
+    fr: "Management de projet",
+    de: "Projektmanagement",
+    description_fr: "Grundlagen, Wissensgebiete, Werkzeuge et gestion agile de projet.",
+    chapters: PROJEKTMANAGEMENT_CHAPTERS,
   },
 ]
 

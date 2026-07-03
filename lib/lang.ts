@@ -5,6 +5,7 @@ export const LANG_LABELS: Record<Lang, string> = {
   python: "Python",
   perl: "Perl",
   javascript: "JavaScript",
+  none: "Keine Programmiersprache",
 }
 
 export function getLangLabel(lang: Lang): string {

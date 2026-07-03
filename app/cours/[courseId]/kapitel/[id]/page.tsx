@@ -32,7 +32,7 @@ const EXERCISE_TYPES = [
 ]
 
 // These exercise types only make sense once the chapter has actual code to work with.
-const NEEDS_CODE = new Set(['matching', 'codeAnalysis'])
+const NEEDS_CODE = new Set(['codeAnalysis'])
 
 function runCommands(lang: Lang, slug: string): string[] {
   switch (lang) {
@@ -40,6 +40,7 @@ function runCommands(lang: Lang, slug: string): string[] {
     case "python": return [`python3 ${slug}.py`]
     case "perl": return [`perl ${slug}.pl`]
     case "javascript": return [`node ${slug}.js`]
+    case "none": return []
   }
 }
 
@@ -86,6 +87,7 @@ export default function ChapterPage() {
   const chapterPct = totalAnswers > 0 ? Math.round((totalCorrect / totalAnswers) * 100) : 0
 
   const slug = chapter.de.replace(/[^A-Za-z0-9]+/g, "").toLowerCase() || "chapitre"
+  const commands = runCommands(chapter.lang, slug)
 
   return (
     <div className="mx-auto max-w-4xl space-y-7 sm:space-y-8">
@@ -132,14 +134,16 @@ export default function ChapterPage() {
       )}
 
       {/* Quick commands — Snippet */}
-      <section className="space-y-2">
-        <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Commandes utiles</p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {runCommands(chapter.lang, slug).map(cmd => (
-            <Snippet key={cmd} text={cmd} />
-          ))}
-        </div>
-      </section>
+      {commands.length > 0 && (
+        <section className="space-y-2">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Commandes utiles</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {commands.map(cmd => (
+              <Snippet key={cmd} text={cmd} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Lesson */}
       <LessonView courseId={courseId} chapterId={chapter.id} lang={chapter.lang} />
@@ -155,6 +159,9 @@ export default function ChapterPage() {
             const typePct = prog ? Math.round((prog.correct / prog.total) * 100) : 0
             const Icon = type.icon
             const disabled = !chapter.hasCode && NEEDS_CODE.has(type.id)
+            const description = chapter.hasCode === false && type.id === 'matching'
+              ? "Associer concepts, définitions, rôles ou formules"
+              : type.desc
 
             const card = (
               <Card
@@ -180,7 +187,7 @@ export default function ChapterPage() {
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground mt-0.5">
-                      {disabled ? "Non disponible pour ce chapitre" : type.desc}
+                      {disabled ? "Non disponible (pas de code dans ce chapitre)" : description}
                     </p>
                     {prog && !disabled && (
                       <div className="flex items-center gap-2 mt-2">
@@ -195,7 +202,7 @@ export default function ChapterPage() {
 
             if (disabled) {
               return (
-                <div key={type.id} title="Non disponible pour ce chapitre" aria-disabled="true" className="cursor-not-allowed">
+                <div key={type.id} title="Non disponible (pas de code dans ce chapitre)" aria-disabled="true" className="cursor-not-allowed">
                   {card}
                 </div>
               )
