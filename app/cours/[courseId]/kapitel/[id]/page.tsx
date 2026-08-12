@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Gauge } from "@/components/gauge"
 import { StatusDot } from "@/components/status-dot"
 import { Snippet } from "@/components/snippet"
-import { ArrowLeft, LayoutList, GitMerge, ToggleLeft, Type, Code2 } from "lucide-react"
+import { ArrowLeft, LayoutList, GitMerge, ToggleLeft, Type, Code2, Terminal } from "lucide-react"
 import { LessonView } from "@/components/lesson-view"
 import type { Lang } from "@/lib/chapters/types"
 
@@ -29,10 +29,13 @@ const EXERCISE_TYPES = [
   { id: 'trueFalse',    label: 'Vrai/Faux',     de: 'Wahr/Falsch',     icon: ToggleLeft, desc: '4 affirmations — 2 vraies, 2 fausses', tone: 'text-warning bg-warning/10' },
   { id: 'fillBlank',    label: 'Lückentext',    de: 'Lückentext',      icon: Type,       desc: 'Compléter le code (avec ou sans aide)', tone: 'text-code-token-type bg-code-token-type/10' },
   { id: 'codeAnalysis', label: 'Code-Analyse',  de: 'Code-Analyse',    icon: Code2,      desc: 'Expliquer une ligne de code ciblée', tone: 'text-destructive bg-destructive/10' },
+  { id: 'code',         label: 'Code',          de: 'Code-Übung',      icon: Terminal,   desc: 'Écrire et exécuter du vrai code Python (IDE dans le navigateur)', tone: 'text-success bg-success/10' },
 ]
 
 // These exercise types only make sense once the chapter has actual code to work with.
-const NEEDS_CODE = new Set(['codeAnalysis'])
+const NEEDS_CODE = new Set(['codeAnalysis', 'code'])
+// The "code" exercise runs real Python in the browser via Pyodide — only makes sense for Python chapters.
+const PYTHON_ONLY = new Set(['code'])
 
 function runCommands(lang: Lang, slug: string): string[] {
   switch (lang) {
@@ -154,7 +157,9 @@ export default function ChapterPage() {
           Choisir un type d&apos;exercice
         </h2>
         <div className="grid gap-3">
-          {EXERCISE_TYPES.map(type => {
+          {EXERCISE_TYPES
+            .filter(type => !PYTHON_ONLY.has(type.id) || chapter.lang === 'python')
+            .map(type => {
             const prog = getTypeProgress(type.id)
             const typePct = prog ? Math.round((prog.correct / prog.total) * 100) : 0
             const Icon = type.icon

@@ -13,6 +13,7 @@ import { MatchingExercise } from "@/components/exercises/matching-exercise"
 import { TrueFalseExercise } from "@/components/exercises/true-false-exercise"
 import { FillBlankExercise } from "@/components/exercises/fill-blank-exercise"
 import { CodeAnalysisExercise } from "@/components/exercises/code-analysis-exercise"
+import { CodeExercise } from "@/components/exercises/code-exercise"
 import { Spinner } from "@/components/ui/spinner"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, RefreshCw, AlertCircle } from "lucide-react"
@@ -25,6 +26,7 @@ const TYPE_LABELS: Record<string, string> = {
   trueFalse: 'Wahr/Falsch',
   fillBlank: 'Lückentext',
   codeAnalysis: 'Code-Analyse',
+  code: 'Code-Übung',
 }
 
 export default function ExercisePage() {
@@ -215,6 +217,10 @@ export default function ExercisePage() {
           {exerciseType === 'codeAnalysis' && (
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             <CodeAnalysisExercise data={exercise as any} lang={chapter.lang} onResult={handleResult} onNext={handleNext} onBack={handleBack} />
+          )}
+          {exerciseType === 'code' && (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            <CodeExercise data={exercise as any} lang={chapter.lang} onResult={handleResult} onNext={handleNext} onBack={handleBack} />
           )}
         </>
       )}
