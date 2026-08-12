@@ -237,6 +237,48 @@ Antworte mit diesem JSON:
       }
     }
 
+    case "code": {
+      if (chapter.lang !== "python") {
+        return `${ctx}
+
+Code-Übungen mit ausführbarem Code sind nur für Python verfügbar.
+Antworte mit diesem JSON:
+{
+  "error": "Code-Übungen sind für dieses Kapitel nicht verfügbar."
+}`
+      }
+
+      return `${ctx}
+
+Erstelle eine praktische Python-Programmieraufgabe über "${chapter.de}", im Stil echter Übungsaufgaben aus dem Unterricht (z. B. "ggT nach Euklid berechnen", "einen fehlerhaften Code korrigieren", "ein Skript mit Lücken vervollständigen", "eine Funktion mit Fehlerbehandlung schreiben").
+Wähle ZUFÄLLIG EINE dieser drei Varianten:
+1. "write" — Nutzer schreibt eine kleine, klar spezifizierte Funktion/ein Skript komplett neu.
+2. "complete" — ein Code-Gerüst (starter_code) mit fehlenden Teilen wird vorgegeben, die der Nutzer ergänzen muss.
+3. "fix" — starter_code enthält 2-5 bewusst eingebaute Fehler (Syntax und/oder Logik), die der Nutzer korrigieren muss.
+
+WICHTIGE Regeln, damit die Aufgabe im Browser (Pyodide, ohne echtes Terminal) lösbar und prüfbar ist:
+- Der Code darf NIEMALS interaktives input() verwenden — alle Werte müssen als feste Variablen im Code stehen (z. B. x = 78 statt input()).
+- Kein Datei-, Netzwerk- oder Datenbankzugriff, keine externen Packages außer der Python-Standardbibliothek.
+- Der fertige/korrekte Code muss über print() eine EINDEUTIGE, deterministische Textausgabe erzeugen.
+- Halte den Code kurz (max. 15 Zeilen), fokussiert auf die Konzepte dieses Kapitels.
+- Bei "complete": markiere die Lücken im starter_code deutlich mit Kommentaren "# TODO: ..." an der richtigen Stelle (kein Lauffähigkeits-Anspruch an starter_code).
+- Bei "fix": starter_code muss so, wie er ist, dem originalen (fehlerhaften) Code entsprechen und OHNE die Korrekturen einfügbar sein.
+- Bei "write": starter_code ist null oder ein minimales Gerüst (z. B. nur ein Kommentar mit der Aufgabe).
+
+Antworte mit diesem JSON:
+{
+  "variant": "write" | "complete" | "fix",
+  "instruction_de": "Klare Aufgabenstellung auf Deutsch, wie in einer echten Übung",
+  "instruction_fr": "Consigne équivalente en français",
+  "starter_code": "Python-Code oder null",
+  "solution_code": "Vollständiger, korrekter, lauffähiger Python-Code (ohne input())",
+  "expected_output": "Exakte Ausgabe von solution_code bei Ausführung, Zeilen getrennt durch \\n",
+  "hints": ["Kurzer Hinweis 1", "Kurzer Hinweis 2"],
+  "explanation_de": "Kurze Erklärung der Lösung auf Deutsch",
+  "explanation_fr": "Brève explication de la solution en français"
+}`
+    }
+
     case "codeAnalysis":
       if (!hasCode) {
         return `${ctx}

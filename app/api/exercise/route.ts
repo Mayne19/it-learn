@@ -21,6 +21,13 @@ export async function POST(req: Request) {
     )
   }
 
+  if (exerciseType === 'code' && (chapter.hasCode === false || chapter.lang !== 'python')) {
+    return Response.json(
+      { error: "Ce type d'exercice n'est pas disponible pour ce chapitre." },
+      { status: 400 }
+    )
+  }
+
   const prompt = buildPrompt(chapter, exerciseType, fillBlankMode)
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -32,7 +39,7 @@ export async function POST(req: Request) {
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 2000,
+      max_tokens: exerciseType === 'code' ? 3000 : 2000,
       messages: [{ role: 'user', content: prompt }]
     })
   })
