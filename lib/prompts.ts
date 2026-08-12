@@ -310,3 +310,70 @@ Antworte mit diesem JSON:
       return ctx
   }
 }
+
+export function buildKlausurPrompt(chapters: Chapter[], variantNumber: number): string {
+  const langLabel = getLangLabel("python")
+
+  const chapterList = chapters
+    .map(c => `- Kapitel ${c.id} "${c.de}" (${c.fr}) — Konzepte: ${c.concepts.join(", ")}`)
+    .join("\n")
+
+  return `Du erstellst eine vollständige Musterklausur (Klausur-Variante ${variantNumber}) für den Kurs "Konzepte dynamischer Programmiersprachen".
+
+Diese Klausur muss dem folgenden REALEN Klausurformat exakt entsprechen:
+- Gesamtpunktzahl: genau 90 Punkte
+- 25-27 Aufgaben, jede Aufgabe 1 bis 8 Punkte wert
+- Bestehensgrenze: 45 Punkte (nur zur Information, nicht in den JSON-Output aufnehmen)
+- Aufgabentypen, die GEMISCHT vorkommen sollen (nicht alle müssen vorkommen, aber eine gute Mischung ist Pflicht):
+  - "short_answer": Kurzantwort (1-2 Wörter oder ein kurzer Fachbegriff)
+  - "free_text": Freitext-Antwort/Erklärung in Stichpunkten
+  - "mcq_single": Multiple Choice, genau 1 von 4 Antworten korrekt (>1 Kreuz = 0 Punkte, das wird in der UI simuliert)
+  - "mcq_multi": Multiple Choice, mehrere von z. B. 5-6 Antworten korrekt (maximale Kreuzanzahl ist vorgegeben, Überschreitung = 0 Punkte)
+  - "true_false": mehrere Aussagen jeweils als wahr/falsch markieren
+  - "code_write": Quellcode schreiben oder ergänzen/umformen
+  - "code_output": zu gegebenem Code die Ausgabe ermitteln (OHNE Ausführung zu dürfen)
+  - "find_errors": Fehler in gegebenem Code identifizieren und korrigieren
+  - "matching": Begriffe/Code-Ausschnitte einer Liste von Definitionen/Beschreibungen zuordnen
+  - "fill_blank": Lückentext (Code oder Fließtext) ausfüllen
+  - "define": zu einer gegebenen Definition den passenden Fachbegriff nennen
+
+STRENGE Themen- und Umfangsgrenzen (exakt wie im echten Kurs):
+${chapterList}
+
+Verboten (NIEMALS in einer Aufgabe verwenden):
+- Perl- oder JavaScript-Detailwissen (Syntax, Funktionen, Bibliotheken) — höchstens EINE einzelne, sehr grobe Verständnisfrage zu "was ist an dieser anderen Sprache dynamisch typisiert" ist erlaubt, keine Detailfragen zu Perl-/JS-Syntax
+- Fragen zu Werkzeugen/IDEs (Python-Interpreter, IDLE, Installation)
+- Fragen zu den Praxisprojekten (neuronale Netze, Labyrinth, Web-Scraping/BGH-Urteile)
+- Fragen außerhalb der oben gelisteten Kapitel
+
+Gewichtung: verteile die Punkte GROB proportional zur Anzahl der oben gelisteten Kapitel pro Thema (mehr Kapitel zu einem Thema → tendenziell mehr Punkte für dieses Thema in der Klausur), exakte Gleichverteilung ist nicht nötig.
+
+Jede Aufgabe braucht ein plausibles, korrektes "correct_answer_de" (die vollständige Musterlösung/Korrekturhinweise auf Deutsch) und "explanation_fr" (kurze Erklärung auf Französisch). Bei Code-Aufgaben ist der ${langLabel}-Code syntaktisch korrekt und lauffähig zu formulieren (außer bei find_errors, wo er absichtlich Fehler enthält). Bei mcq_single/mcq_multi/true_false/matching müssen "options"/"items_left"/"items_right" und die korrekten Indizes/Zuordnungen konsistent und eindeutig sein.
+
+Antworte AUSSCHLIESSLICH mit gültigem JSON, kein Markdown, keine Backticks:
+{
+  "title": "Musterklausur ${variantNumber} — Konzepte dynamischer Programmiersprachen",
+  "total_points": 90,
+  "tasks": [
+    {
+      "number": 1,
+      "points": 3,
+      "type": "short_answer" | "free_text" | "mcq_single" | "mcq_multi" | "true_false" | "code_write" | "code_output" | "find_errors" | "matching" | "fill_blank" | "define",
+      "prompt_de": "Vollständige Aufgabenstellung auf Deutsch",
+      "code": "Code-Ausschnitt oder null",
+      "options": ["Option A", "Option B", "..."],
+      "max_marks": 1,
+      "items_left": ["..."],
+      "items_right": ["..."],
+      "correct_answer_de": "Vollständige Musterlösung / Korrekturhinweise auf Deutsch",
+      "explanation_fr": "Brève explication en français"
+    }
+  ]
+}
+
+Hinweise zu den optionalen Feldern je nach "type":
+- "options" nur bei mcq_single/mcq_multi (sonst null)
+- "max_marks" nur bei mcq_multi (maximale Kreuzanzahl, sonst null)
+- "items_left"/"items_right" nur bei matching (sonst null)
+- "code" nur wenn die Aufgabe Code enthält, sonst null`
+}
