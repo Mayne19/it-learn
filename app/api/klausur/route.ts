@@ -1,5 +1,6 @@
-import { getChapter } from '@/lib/courses'
-import { buildPrompt } from '@/lib/prompts'
+import { getCourse } from '@/lib/courses'
+import { buildKlausurPrompt } from '@/lib/prompts'
+import { isKlausurRelevant } from '@/lib/chapters/types'
 import { getApiErrorMessage } from '@/lib/api-errors'
 
 export async function POST(req: Request) {
@@ -10,25 +11,16 @@ export async function POST(req: Request) {
     )
   }
 
-  const { courseId, chapterId, exerciseType, fillBlankMode } = await req.json()
-  const chapter = getChapter(courseId, chapterId)
-  if (!chapter) return Response.json({ error: 'Chapitre non trouvé' }, { status: 404 })
+  const { courseId, variantNumber } = await req.json()
+  const course = getCourse(courseId)
+  if (!course) return Response.json({ error: 'Cours non trouvé' }, { status: 404 })
 
-  if (chapter.hasCode === false && exerciseType === 'codeAnalysis') {
-    return Response.json(
-      { error: "Ce type d'exercice n'est pas disponible pour ce chapitre." },
-      { status: 400 }
-    )
+  const klausurChapters = course.chapters.filter(isKlausurRelevant)
+  if (klausurChapters.length === 0) {
+    return Response.json({ error: "Le mode Klausur n'est pas disponible pour ce cours." }, { status: 400 })
   }
 
-  if (exerciseType === 'code' && (chapter.hasCode === false || chapter.lang !== 'python')) {
-    return Response.json(
-      { error: "Ce type d'exercice n'est pas disponible pour ce chapitre." },
-      { status: 400 }
-    )
-  }
-
-  const prompt = buildPrompt(chapter, exerciseType, fillBlankMode)
+  const prompt = buildKlausurPrompt(klausurChapters, variantNumber ?? 1)
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -39,7 +31,7 @@ export async function POST(req: Request) {
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: exerciseType === 'code' ? 3000 : 2000,
+      max_tokens: 8000,
       messages: [{ role: 'user', content: prompt }]
     })
   })
@@ -58,8 +50,8 @@ export async function POST(req: Request) {
   if (start === -1 || end === -1) return Response.json({ error: 'Réponse invalide' }, { status: 500 })
 
   try {
-    const exercise = JSON.parse(text.slice(start, end + 1))
-    return Response.json(exercise)
+    const klausur = JSON.parse(text.slice(start, end + 1))
+    return Response.json(klausur)
   } catch {
     return Response.json({ error: 'JSON invalide' }, { status: 500 })
   }

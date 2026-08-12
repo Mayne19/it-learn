@@ -8,18 +8,31 @@ const JAVA_TRAPS = `- lokale Variable vs. Attribut (Instanzvariable)
 - Überschreiben (@Override) vs. Überladen (Overloading)
 - statisch (static) vs. nicht-statisch`
 
-const DYNAMIC_LANG_TRAPS = `- dynamische vs. statische Typisierung (Laufzeit vs. Kompilierzeit)
-- mutable (list, dict, set) vs. immutable (tuple, str, int, bytes)
+const DYNAMIC_LANG_TRAPS = `- dynamische vs. statische Typisierung (Laufzeit vs. Kompilierzeit) — NICHT verwechseln mit stark/schwach typisiert (andere Eigenschaft!)
+- mutable (list, dict, set, bytearray) vs. immutable (tuple, str, int, bytes)
 - Methode vs. Funktion vs. Built-In-Funktion
-- lokale Variable vs. globale Variable (scope)
-- list vs. tuple vs. set vs. dict (Unterschiede!)
+- lokale Variable vs. globale Variable (scope) — Zuweisung IRGENDWO im Funktionskörper macht die Variable im GANZEN Block lokal, auch VOR der Zuweisung (→ UnboundLocalError bei Lesezugriff davor, nicht bei falschem Wert!)
+- list vs. tuple vs. set vs. dict (Unterschiede, insb. set ist KEINE Sequenz — kein Slicing/Indizierung!)
 - Einrückung statt {} in Python
 - elif (Python) vs. else if (andere Sprachen)
-- and/or/not (Python) vs. &&/||/! (Java, JavaScript)
-- call-by-value vs. call-by-reference (immutable vs. mutable Objekte!)
-- import vs. from...import
-- try/except/else/finally — wann wird was ausgeführt?
-- Cursor vs. Connection bei Datenbankzugriff`
+- and/or/not (Python) vs. &&/||/! (Java, JavaScript) — diese Symbole existieren in Python nicht als Operatoren
+- String-Verkettung nur gleicher Typ: "a" + 42 ist TypeError, str(42) nötig
+- %-Formatierung mit mehreren Werten braucht ein Tupel: "%s %s" % (a, b), NICHT % a, b
+- ** für Potenzieren (nicht ^ — das ist bitweises XOR!), // für Ganzzahldivision
+- Inkrement/Dekrement (++/--) existiert in Python NICHT, nur += 1 / -= 1
+- true/false (klein) vs. True/False (Python: groß!), null vs. None
+- call-by-value vs. call-by-reference (immutable vs. mutable Objekte als Funktionsparameter!)
+- optionale Parameter (mit Default) müssen NACH den Pflichtparametern stehen; *args vor **kwargs
+- Positions-Argumente dürfen nicht NACH Keyword-Argumenten folgen
+- import vs. from...import vs. import...as
+- try/except/else/finally — wann wird was ausgeführt? finally läuft IMMER, auch bei return/Exception
+- except-Reihenfolge: spezifischste Exception zuerst, allgemeine (Exception) zuletzt
+- Cursor vs. Connection bei Datenbankzugriff, commit() nicht vergessen
+- regex: \\b (Wortgrenze) vs. \\B (Nicht-Wortgrenze) — leicht verwechselt!
+- regex: findall() liefert nur NICHT-überlappende Treffer
+- regex Quantifier {min,} = "mindestens", {,max} bzw. {min,max} = Ober-/Untergrenze
+- w=Datei-Schreibmodus überschreibt bestehenden Inhalt (kein Anhängen!), a=append hängt an
+- eval() wertet einen Ausdruck aus (Rückgabewert), exec() führt Code aus (kein Rückgabewert)`
 
 const PROJECT_MANAGEMENT_TRAPS = `- EV vs. PV vs. AC (Earned Value Verwechslung)
 - CV = EV-AC vs. SV = EV-PV (Vorzeichen und Bedeutung)
@@ -224,6 +237,48 @@ Antworte mit diesem JSON:
       }
     }
 
+    case "code": {
+      if (chapter.lang !== "python") {
+        return `${ctx}
+
+Code-Übungen mit ausführbarem Code sind nur für Python verfügbar.
+Antworte mit diesem JSON:
+{
+  "error": "Code-Übungen sind für dieses Kapitel nicht verfügbar."
+}`
+      }
+
+      return `${ctx}
+
+Erstelle eine praktische Python-Programmieraufgabe über "${chapter.de}", im Stil echter Übungsaufgaben aus dem Unterricht (z. B. "ggT nach Euklid berechnen", "einen fehlerhaften Code korrigieren", "ein Skript mit Lücken vervollständigen", "eine Funktion mit Fehlerbehandlung schreiben").
+Wähle ZUFÄLLIG EINE dieser drei Varianten:
+1. "write" — Nutzer schreibt eine kleine, klar spezifizierte Funktion/ein Skript komplett neu.
+2. "complete" — ein Code-Gerüst (starter_code) mit fehlenden Teilen wird vorgegeben, die der Nutzer ergänzen muss.
+3. "fix" — starter_code enthält 2-5 bewusst eingebaute Fehler (Syntax und/oder Logik), die der Nutzer korrigieren muss.
+
+WICHTIGE Regeln, damit die Aufgabe im Browser (Pyodide, ohne echtes Terminal) lösbar und prüfbar ist:
+- Der Code darf NIEMALS interaktives input() verwenden — alle Werte müssen als feste Variablen im Code stehen (z. B. x = 78 statt input()).
+- Kein Datei-, Netzwerk- oder Datenbankzugriff, keine externen Packages außer der Python-Standardbibliothek.
+- Der fertige/korrekte Code muss über print() eine EINDEUTIGE, deterministische Textausgabe erzeugen.
+- Halte den Code kurz (max. 15 Zeilen), fokussiert auf die Konzepte dieses Kapitels.
+- Bei "complete": markiere die Lücken im starter_code deutlich mit Kommentaren "# TODO: ..." an der richtigen Stelle (kein Lauffähigkeits-Anspruch an starter_code).
+- Bei "fix": starter_code muss so, wie er ist, dem originalen (fehlerhaften) Code entsprechen und OHNE die Korrekturen einfügbar sein.
+- Bei "write": starter_code ist null oder ein minimales Gerüst (z. B. nur ein Kommentar mit der Aufgabe).
+
+Antworte mit diesem JSON:
+{
+  "variant": "write" | "complete" | "fix",
+  "instruction_de": "Klare Aufgabenstellung auf Deutsch, wie in einer echten Übung",
+  "instruction_fr": "Consigne équivalente en français",
+  "starter_code": "Python-Code oder null",
+  "solution_code": "Vollständiger, korrekter, lauffähiger Python-Code (ohne input())",
+  "expected_output": "Exakte Ausgabe von solution_code bei Ausführung, Zeilen getrennt durch \\n",
+  "hints": ["Kurzer Hinweis 1", "Kurzer Hinweis 2"],
+  "explanation_de": "Kurze Erklärung der Lösung auf Deutsch",
+  "explanation_fr": "Brève explication de la solution en français"
+}`
+    }
+
     case "codeAnalysis":
       if (!hasCode) {
         return `${ctx}
@@ -254,4 +309,71 @@ Antworte mit diesem JSON:
     default:
       return ctx
   }
+}
+
+export function buildKlausurPrompt(chapters: Chapter[], variantNumber: number): string {
+  const langLabel = getLangLabel("python")
+
+  const chapterList = chapters
+    .map(c => `- Kapitel ${c.id} "${c.de}" (${c.fr}) — Konzepte: ${c.concepts.join(", ")}`)
+    .join("\n")
+
+  return `Du erstellst eine vollständige Musterklausur (Klausur-Variante ${variantNumber}) für den Kurs "Konzepte dynamischer Programmiersprachen".
+
+Diese Klausur muss dem folgenden REALEN Klausurformat exakt entsprechen:
+- Gesamtpunktzahl: genau 90 Punkte
+- 25-27 Aufgaben, jede Aufgabe 1 bis 8 Punkte wert
+- Bestehensgrenze: 45 Punkte (nur zur Information, nicht in den JSON-Output aufnehmen)
+- Aufgabentypen, die GEMISCHT vorkommen sollen (nicht alle müssen vorkommen, aber eine gute Mischung ist Pflicht):
+  - "short_answer": Kurzantwort (1-2 Wörter oder ein kurzer Fachbegriff)
+  - "free_text": Freitext-Antwort/Erklärung in Stichpunkten
+  - "mcq_single": Multiple Choice, genau 1 von 4 Antworten korrekt (>1 Kreuz = 0 Punkte, das wird in der UI simuliert)
+  - "mcq_multi": Multiple Choice, mehrere von z. B. 5-6 Antworten korrekt (maximale Kreuzanzahl ist vorgegeben, Überschreitung = 0 Punkte)
+  - "true_false": mehrere Aussagen jeweils als wahr/falsch markieren
+  - "code_write": Quellcode schreiben oder ergänzen/umformen
+  - "code_output": zu gegebenem Code die Ausgabe ermitteln (OHNE Ausführung zu dürfen)
+  - "find_errors": Fehler in gegebenem Code identifizieren und korrigieren
+  - "matching": Begriffe/Code-Ausschnitte einer Liste von Definitionen/Beschreibungen zuordnen
+  - "fill_blank": Lückentext (Code oder Fließtext) ausfüllen
+  - "define": zu einer gegebenen Definition den passenden Fachbegriff nennen
+
+STRENGE Themen- und Umfangsgrenzen (exakt wie im echten Kurs):
+${chapterList}
+
+Verboten (NIEMALS in einer Aufgabe verwenden):
+- Perl- oder JavaScript-Detailwissen (Syntax, Funktionen, Bibliotheken) — höchstens EINE einzelne, sehr grobe Verständnisfrage zu "was ist an dieser anderen Sprache dynamisch typisiert" ist erlaubt, keine Detailfragen zu Perl-/JS-Syntax
+- Fragen zu Werkzeugen/IDEs (Python-Interpreter, IDLE, Installation)
+- Fragen zu den Praxisprojekten (neuronale Netze, Labyrinth, Web-Scraping/BGH-Urteile)
+- Fragen außerhalb der oben gelisteten Kapitel
+
+Gewichtung: verteile die Punkte GROB proportional zur Anzahl der oben gelisteten Kapitel pro Thema (mehr Kapitel zu einem Thema → tendenziell mehr Punkte für dieses Thema in der Klausur), exakte Gleichverteilung ist nicht nötig.
+
+Jede Aufgabe braucht ein plausibles, korrektes "correct_answer_de" (die vollständige Musterlösung/Korrekturhinweise auf Deutsch) und "explanation_fr" (kurze Erklärung auf Französisch). Bei Code-Aufgaben ist der ${langLabel}-Code syntaktisch korrekt und lauffähig zu formulieren (außer bei find_errors, wo er absichtlich Fehler enthält). Bei mcq_single/mcq_multi/true_false/matching müssen "options"/"items_left"/"items_right" und die korrekten Indizes/Zuordnungen konsistent und eindeutig sein.
+
+Antworte AUSSCHLIESSLICH mit gültigem JSON, kein Markdown, keine Backticks:
+{
+  "title": "Musterklausur ${variantNumber} — Konzepte dynamischer Programmiersprachen",
+  "total_points": 90,
+  "tasks": [
+    {
+      "number": 1,
+      "points": 3,
+      "type": "short_answer" | "free_text" | "mcq_single" | "mcq_multi" | "true_false" | "code_write" | "code_output" | "find_errors" | "matching" | "fill_blank" | "define",
+      "prompt_de": "Vollständige Aufgabenstellung auf Deutsch",
+      "code": "Code-Ausschnitt oder null",
+      "options": ["Option A", "Option B", "..."],
+      "max_marks": 1,
+      "items_left": ["..."],
+      "items_right": ["..."],
+      "correct_answer_de": "Vollständige Musterlösung / Korrekturhinweise auf Deutsch",
+      "explanation_fr": "Brève explication en français"
+    }
+  ]
+}
+
+Hinweise zu den optionalen Feldern je nach "type":
+- "options" nur bei mcq_single/mcq_multi (sonst null)
+- "max_marks" nur bei mcq_multi (maximale Kreuzanzahl, sonst null)
+- "items_left"/"items_right" nur bei matching (sonst null)
+- "code" nur wenn die Aufgabe Code enthält, sonst null`
 }

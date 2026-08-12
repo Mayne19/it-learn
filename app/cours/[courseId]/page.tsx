@@ -6,13 +6,14 @@ import Link from "next/link"
 import { isSupabaseConfigured, getSupabaseClient, getProgress } from "@/lib/supabase"
 import { localGetProgress } from "@/lib/local-progress"
 import { getCourse } from "@/lib/courses"
+import { isKlausurRelevant } from "@/lib/chapters/types"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Gauge } from "@/components/gauge"
 import { StatusDot } from "@/components/status-dot"
 import type { DotState } from "@/components/status-dot"
-import { ArrowLeft, Sparkles } from "lucide-react"
+import { ArrowLeft, Sparkles, GraduationCap, ChevronRight } from "lucide-react"
 
 interface ProgressRow {
   course_id: string
@@ -132,6 +133,23 @@ export default function CoursePage() {
         <p className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-muted-foreground">
           {progressError}
         </p>
+      )}
+
+      {course.chapters.some(isKlausurRelevant) && (
+        <Link href={`/cours/${courseId}/klausur`}>
+          <Card className="cursor-pointer border border-warning/30 bg-warning/5 shadow-none transition-colors hover:border-warning/50 hover:bg-warning/10">
+            <CardContent className="flex items-center gap-4 p-4 sm:p-5">
+              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-warning/15 text-warning">
+                <GraduationCap className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-lg font-semibold">Klausur blanche</p>
+                <p className="text-sm text-muted-foreground">3 examens complets · 90 points · format réel de l&apos;examen</p>
+              </div>
+              <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </Link>
       )}
 
       <section className="space-y-3">
