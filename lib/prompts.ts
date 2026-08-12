@@ -8,18 +8,31 @@ const JAVA_TRAPS = `- lokale Variable vs. Attribut (Instanzvariable)
 - Überschreiben (@Override) vs. Überladen (Overloading)
 - statisch (static) vs. nicht-statisch`
 
-const DYNAMIC_LANG_TRAPS = `- dynamische vs. statische Typisierung (Laufzeit vs. Kompilierzeit)
-- mutable (list, dict, set) vs. immutable (tuple, str, int, bytes)
+const DYNAMIC_LANG_TRAPS = `- dynamische vs. statische Typisierung (Laufzeit vs. Kompilierzeit) — NICHT verwechseln mit stark/schwach typisiert (andere Eigenschaft!)
+- mutable (list, dict, set, bytearray) vs. immutable (tuple, str, int, bytes)
 - Methode vs. Funktion vs. Built-In-Funktion
-- lokale Variable vs. globale Variable (scope)
-- list vs. tuple vs. set vs. dict (Unterschiede!)
+- lokale Variable vs. globale Variable (scope) — Zuweisung IRGENDWO im Funktionskörper macht die Variable im GANZEN Block lokal, auch VOR der Zuweisung (→ UnboundLocalError bei Lesezugriff davor, nicht bei falschem Wert!)
+- list vs. tuple vs. set vs. dict (Unterschiede, insb. set ist KEINE Sequenz — kein Slicing/Indizierung!)
 - Einrückung statt {} in Python
 - elif (Python) vs. else if (andere Sprachen)
-- and/or/not (Python) vs. &&/||/! (Java, JavaScript)
-- call-by-value vs. call-by-reference (immutable vs. mutable Objekte!)
-- import vs. from...import
-- try/except/else/finally — wann wird was ausgeführt?
-- Cursor vs. Connection bei Datenbankzugriff`
+- and/or/not (Python) vs. &&/||/! (Java, JavaScript) — diese Symbole existieren in Python nicht als Operatoren
+- String-Verkettung nur gleicher Typ: "a" + 42 ist TypeError, str(42) nötig
+- %-Formatierung mit mehreren Werten braucht ein Tupel: "%s %s" % (a, b), NICHT % a, b
+- ** für Potenzieren (nicht ^ — das ist bitweises XOR!), // für Ganzzahldivision
+- Inkrement/Dekrement (++/--) existiert in Python NICHT, nur += 1 / -= 1
+- true/false (klein) vs. True/False (Python: groß!), null vs. None
+- call-by-value vs. call-by-reference (immutable vs. mutable Objekte als Funktionsparameter!)
+- optionale Parameter (mit Default) müssen NACH den Pflichtparametern stehen; *args vor **kwargs
+- Positions-Argumente dürfen nicht NACH Keyword-Argumenten folgen
+- import vs. from...import vs. import...as
+- try/except/else/finally — wann wird was ausgeführt? finally läuft IMMER, auch bei return/Exception
+- except-Reihenfolge: spezifischste Exception zuerst, allgemeine (Exception) zuletzt
+- Cursor vs. Connection bei Datenbankzugriff, commit() nicht vergessen
+- regex: \\b (Wortgrenze) vs. \\B (Nicht-Wortgrenze) — leicht verwechselt!
+- regex: findall() liefert nur NICHT-überlappende Treffer
+- regex Quantifier {min,} = "mindestens", {,max} bzw. {min,max} = Ober-/Untergrenze
+- w=Datei-Schreibmodus überschreibt bestehenden Inhalt (kein Anhängen!), a=append hängt an
+- eval() wertet einen Ausdruck aus (Rückgabewert), exec() führt Code aus (kein Rückgabewert)`
 
 const PROJECT_MANAGEMENT_TRAPS = `- EV vs. PV vs. AC (Earned Value Verwechslung)
 - CV = EV-AC vs. SV = EV-PV (Vorzeichen und Bedeutung)
