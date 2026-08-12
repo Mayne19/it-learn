@@ -14,3 +14,7 @@ export interface Chapter {
   /** True when this chapter is part of the exam-focused topic set. */
   klausurRelevant?: boolean
 }
+
+export function isKlausurRelevant(chapter: Chapter): boolean {
+  return chapter.klausurRelevant !== false
+}
