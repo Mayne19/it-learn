@@ -16,6 +16,20 @@ export async function createStudyCourse(userId: string, title: string): Promise<
   return data as StudyCourse
 }
 
+export async function getStudyCourse(studyCourseId: string): Promise<StudyCourse | null> {
+  const { data, error } = await getSupabaseClient()
+    .from("study_courses")
+    .select("*")
+    .eq("id", studyCourseId)
+    .maybeSingle()
+
+  if (error) {
+    throw new Error(`Impossible de charger le cours: ${error.message}`)
+  }
+
+  return (data as StudyCourse) ?? null
+}
+
 export async function listStudyCourses(userId: string): Promise<StudyCourse[]> {
   const { data, error } = await getSupabaseClient()
     .from("study_courses")
