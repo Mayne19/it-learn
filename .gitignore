@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# supports de cours personnels (PDF sources, non versionnés)
+/doc dynam/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

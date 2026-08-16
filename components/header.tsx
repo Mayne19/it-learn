@@ -5,7 +5,7 @@ import Link from "next/link"
 import { ThemeSwitcher } from "@/components/theme-switcher"
 import { Button } from "@/components/ui/button"
 import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { BookOpen, LogIn, LogOut } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 
@@ -14,6 +14,12 @@ export function Header() {
   const [authChecked, setAuthChecked] = useState(false)
   const supabaseConfigured = isSupabaseConfigured()
   const router = useRouter()
+  const pathname = usePathname()
+
+  // Le mode étude (/etude/*) a sa propre coquille (sidebar avec logo,
+  // profil et déconnexion) — voir components/study/app-shell.tsx. Le
+  // header horizontal reste réservé au reste du site (mode Klausur).
+  const isStudyMode = pathname?.startsWith("/etude")
 
   useEffect(() => {
     if (!supabaseConfigured) {
@@ -47,6 +53,8 @@ export function Header() {
     try { await getSupabaseClient().auth.signOut() } catch { /* ignore */ }
     router.push("/login")
   }
+
+  if (isStudyMode) return null
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-card/80 backdrop-blur">

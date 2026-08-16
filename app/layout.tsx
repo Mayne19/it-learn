@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Header } from "@/components/header"
+import { AppFrame } from "@/components/app-frame"
 import { Geist, Geist_Mono } from "next/font/google"
 import { cn } from "@/lib/utils"
 
@@ -24,9 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen bg-background text-foreground antialiased overscroll-none">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <Header />
-          <main className="mx-auto max-w-screen-xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-            {children}
-          </main>
+          <AppFrame>{children}</AppFrame>
         </ThemeProvider>
       </body>
     </html>
