@@ -46,7 +46,7 @@ export async function getFlashcardProgress(
 ): Promise<ReviewState | null> {
   const { data, error } = await getSupabaseClient()
     .from("study_flashcards_progress")
-    .select("interval_days, ease_factor, due_at")
+    .select("interval_days, ease_factor, due_at, reviews")
     .eq("user_id", userId)
     .eq("flashcard_id", flashcardId)
     .maybeSingle()
@@ -61,6 +61,7 @@ export async function getFlashcardProgress(
     intervalDays: data.interval_days,
     easeFactor: Number(data.ease_factor),
     dueAt: data.due_at,
+    reviews: data.reviews,
   }
 }
 
