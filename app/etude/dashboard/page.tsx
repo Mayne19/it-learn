@@ -9,10 +9,9 @@ import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription, AlertAction } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Spinner } from "@/components/ui/spinner"
 import {
-  ArrowLeft, Upload, Plus, FileText, Trash2, AlertCircle,
+  ArrowLeft, Plus, FileText, Trash2, AlertCircle,
   CheckCircle2, BookOpen, FileUp, ArrowRight,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -57,7 +56,9 @@ export default function EtudeDashboardManager() {
     }
   }, [userId])
 
-  useEffect(() => { loadCourses() }, [loadCourses])
+  useEffect(() => {
+    Promise.resolve().then(() => loadCourses())
+  }, [loadCourses])
 
   const loadFiles = useCallback(async (course: StudyCourse) => {
     try {
@@ -68,7 +69,8 @@ export default function EtudeDashboardManager() {
   }, [])
 
   useEffect(() => {
-    if (selectedCourse) loadFiles(selectedCourse)
+    if (!selectedCourse) return
+    Promise.resolve().then(() => loadFiles(selectedCourse))
   }, [selectedCourse, loadFiles])
 
   function clearMessages() { setError(""); setSuccess("") }
