@@ -1,141 +1,73 @@
-# DB Anpassung — Mise à jour de la base de données Supabase
+# DB Anpassung — mode Étude
 
-Statut : à exécuter par toi dans le dashboard Supabase. Ce document liste
-les requêtes SQL exactes, dans l'ordre, avec le contexte de sécurité.
-Rien de ce document n'a été exécuté sur ta base — c'est une checklist à
-suivre manuellement.
+À exécuter dans Supabase (SQL Editor), dans l'ordre. Rien n'a encore été
+appliqué. Vérifié champ par champ contre les 3 pages `/etude`.
 
-**Ce schéma a été vérifié champ par champ contre les 3 pages actuelles
-du mode `/etude`** (`app/etude/page.tsx`, `app/etude/dashboard/page.tsx`,
-`app/etude/[courseId]/kapitel/[id]/page.tsx`) — toutes les colonnes
-qu'elles lisent existent dans ce schéma, sous les noms exacts attendus.
+## 0. Où / comment
 
-Dernière mise à jour : 2026-08-16.
+1. [supabase.com/dashboard](https://supabase.com/dashboard) → projet `it-learn` → **SQL Editor** → **New query** → coller le bloc → **Run**.
+2. Un bloc à la fois, dans l'ordre des sections (clés étrangères entre tables).
+3. Tous les blocs sont idempotents (`if not exists` / `drop policy if exists`) — rejouables sans risque.
 
-## 0. Où exécuter ces requêtes
+Déjà appliqué ?
 
-1. Va sur [supabase.com/dashboard](https://supabase.com/dashboard) → sélectionne ton projet `it-learn`.
-2. Menu de gauche → **SQL Editor**.
-3. **New query**, colle le bloc SQL concerné, clique **Run**.
-4. Fais-le dans l'ordre des sections ci-dessous — certaines tables référencent les précédentes (clés étrangères).
-
-Alternative si tu as la CLI Supabase installée en local :
-```bash
-supabase db push
-```
-Elle applique automatiquement tous les fichiers de `supabase/migrations/`
-pas encore joués, dans l'ordre numérique — mais **cette fois le fichier
-`0003_study_mode.sql` du dépôt ne correspond plus exactement au SQL de ce
-document** (voir §7 "à reporter dans le fichier"), donc pour l'instant
-utilise le copier-coller manuel dans le SQL Editor plutôt que `db push`.
-
-**Comment savoir ce qui est déjà appliqué** :
 ```sql
 select table_name from information_schema.tables
 where table_schema = 'public' and table_name like 'study_%'
 order by table_name;
 ```
-Si ça retourne des lignes, une partie de la migration a déjà tourné.
-Tous les blocs ci-dessous utilisent `create table if not exists` et
-`drop policy if exists` avant chaque `create policy`, donc les rejouer
-sans rien avoir supprimé au préalable est sans risque.
 
----
+## 1. Sécurité — état des lieux
 
-## 1. Sécurité — ce qui est déjà garanti, et ce qui reste à vérifier
+| Point | État |
+|---|---|
+| Mots de passe | Gérés par Supabase Auth, hash bcrypt côté serveur. Aucune table `users`/`password` custom. Rien à faire. |
+| RLS | Activé sur toutes les tables `study_*`, policy `auth.uid() = user_id`. |
+| `with check` | Présent sur toutes les policies, y compris `study_lessons_cache` (manquant dans une version antérieure, corrigé). |
+| Clé `anon`/`public` | OK à exposer côté client (`NEXT_PUBLIC_SUPABASE_ANON_KEY`), protégée par RLS. |
+| Clé `service_role` | Jamais utilisée dans ce projet — contourne RLS entièrement. |
+| `ANTHROPIC_API_KEY` | Serveur seulement, jamais `NEXT_PUBLIC_*`. |
 
-### 1.1 Mots de passe : déjà sécurisés, rien à faire
+`.env.local` doit rester dans `.gitignore` (déjà couvert par `.env*`).
 
-L'app utilise l'API **Supabase Auth** (`supabase.auth.signInWithPassword`,
-`supabase.auth.signUp` dans `app/login/page.tsx`) — pas de système de mot
-de passe fait maison :
+## 2. Ordre d'exécution
 
-- Le mot de passe en clair ne transite que sur HTTPS entre le navigateur et les serveurs Supabase.
-- Supabase le **hashe avec bcrypt** avant tout stockage — ton code applicatif n'a jamais accès au hash ni au mot de passe en clair au-delà du formulaire de connexion.
-- Il n'existe **aucune table `users` avec une colonne `password`** gérée par ce projet — les identifiants vivent dans le schéma interne `auth.*` de Supabase, que tu ne touches jamais directement.
-
-Aucune action requise sur ce point.
-
-### 1.2 RLS (Row Level Security) : principe appliqué partout
-
-Chaque table `study_*` a RLS activé, avec une policy qui limite l'accès
-aux lignes appartenant à l'utilisateur connecté (`auth.uid() = user_id`).
-Sans ça, n'importe quel utilisateur connecté pourrait lire/modifier les
-données de n'importe qui d'autre via l'API Supabase — RLS empêche ça au
-niveau de la base, indépendamment de ce que le code frontend filtre ou
-oublie de filtrer.
-
-### 1.3 `with check` présent sur toutes les policies
-
-Sur une policy `for all`, `using` contrôle la lecture (et quelles lignes
-existantes peuvent être modifiées/supprimées), `with check` contrôle ce
-qu'une **nouvelle ligne insérée ou modifiée** est autorisée à contenir.
-Une policy sans `with check` est incomplète par omission. Toutes les
-policies de ce document ont les deux — y compris `study_lessons_cache`,
-qui ne l'avait pas dans la version précédente.
-
-### 1.4 Clés d'environnement — ce qui est public, ce qui ne l'est jamais
-
-Dans `Project Settings → API` du dashboard Supabase :
-
-| Clé | Où l'utiliser | Peut être publique ? |
+| # | Contenu | Statut |
 |---|---|---|
-| `anon` / `public` | `.env.local` → `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Oui — protégée par RLS, prévue pour être exposée au navigateur |
-| `service_role` | **Jamais dans ce projet** | Non, jamais — elle **contourne RLS entièrement** |
-| `ANTHROPIC_API_KEY` | `.env.local`, jamais préfixée `NEXT_PUBLIC_` | Non — reste côté serveur (routes `app/api/*`) |
+| 1 | `0001_progress.sql` | Probablement déjà en prod |
+| 2 | `0002_multi_course.sql` | Probablement déjà en prod |
+| 3 | §3 ci-dessous — tables `study_*` | À jouer |
+| 4 | §4 ci-dessous — vue de progression | À jouer |
+| 5 | §5 ci-dessous — bucket Storage | À jouer |
 
-Vérifie que `.env.local` est listé dans `.gitignore` (déjà le cas via le
-motif `.env*`) avant d'y mettre quoi que ce soit.
+Vérifier 1/2 : `select column_name from information_schema.columns where table_schema='public' and table_name='progress';` — si `course_id` apparaît, passer direct à §3.
 
----
+## 3. Tables `study_*`
 
-## 2. Ordre d'exécution — vue d'ensemble
-
-| # | Contenu | Déjà en prod ? |
+| Table | Rôle | RLS |
 |---|---|---|
-| 1 | `0001_progress.sql` — table `progress` mono-cours d'origine | Probablement oui si l'app tourne déjà |
-| 2 | `0002_multi_course.sql` — ajoute `course_id` à `progress` | Probablement oui |
-| 3 | **Ce document, §3** — tables `study_*` (mode Étude), schéma complet | **Non — à jouer maintenant** |
-| 4 | **Ce document, §4** — vue de progression calculée | **Non — à jouer maintenant** |
-| 5 | **Ce document, §5** — bucket Storage pour les PDF uploadés | **Non — à jouer maintenant** |
+| `study_courses` | Cours créé par l'utilisateur | `user_id` direct |
+| `study_course_files` | PDF uploadés | `user_id` direct |
+| `study_chapters` | Chapitres extraits par l'IA | `user_id` direct |
+| `study_lessons_cache` | Cours détaillé généré, en cache | via jointure `study_chapters` |
+| `study_flashcards` | Cartes de révision par chapitre | `user_id` direct |
+| `study_flashcards_progress` | Progression SM-2 par carte | `user_id` direct |
 
-Si tu n'es pas sûr que `0001`/`0002` sont déjà appliquées :
-```sql
-select column_name from information_schema.columns
-where table_schema = 'public' and table_name = 'progress';
-```
-Si `course_id` apparaît, `0001` et `0002` sont déjà en place — passe
-directement à la section 3.
+Colonnes ajoutées vs. version initiale, et pourquoi :
 
----
-
-## 3. Requête — tables `study_*` (schéma complet, aligné sur les pages)
-
-Copie-colle ce bloc complet dans le SQL Editor et exécute-le.
-
-**Ce qui a changé par rapport à la version précédente de ce document**,
-et pourquoi — chaque page du mode `/etude` a été relue en détail pour
-lister tous les champs qu'elle attend réellement :
-
-| Colonne ajoutée | Table | Pourquoi |
+| Colonne | Table | Raison |
 |---|---|---|
-| `title` | `study_chapters` | `app/etude/page.tsx` et la page chapitre affichent `chapter.title` (un champ simple), en plus de `title_de`/`title_fr` qui servent à l'ingestion IA et au cours détaillé bilingue — les deux coexistent, rien n'est supprimé |
-| `code_snippets` | `study_chapters` | La page chapitre calcule `hasCode` à partir de `chapter.code_snippets`, pas de `has_code` (qui reste aussi, utilisé par le prompt d'ingestion) |
-| `code_lang` | `study_chapters` | Utilisé pour choisir la coloration syntaxique (`Lang`) dans `CodeBlock` |
-| `profile` | `study_chapters` | La page chapitre lit `chapter.profile` pour choisir le dosage d'exercices (`getExerciseSlots`), en plus de `study_courses.profile` qui reste la valeur de référence — synchronisée par trigger, voir plus bas |
-| `file_name` | `study_course_files` | Le dashboard lit `f.file_name`, pas `f.filename` — **on garde `filename` comme colonne réelle et on ajoute `file_name` en alias via une colonne générée**, pour ne pas casser `lib/study/queries.ts` qui écrit déjà `filename` |
+| `title` | `study_chapters` | Titre simple affiché par les pages ; rempli depuis `title_de` par trigger si absent |
+| `code_snippets`, `code_lang` | `study_chapters` | Lus directement par la page chapitre (`hasCode`, coloration syntaxique) |
+| `profile` | `study_chapters` | Dosage d'exercices sans jointure ; synchronisé depuis `study_courses.profile` par trigger |
+| `file_name` | `study_course_files` | Alias généré de `filename` (colonne réelle inchangée) pour matcher le dashboard |
 
-`mastery_pct` et `next_review`, utilisés par `app/etude/page.tsx`, ne
-sont **volontairement pas** des colonnes ici — voir §4 : ce sont des
-valeurs dérivées de `study_flashcards_progress`, calculées à la volée
-par une vue plutôt que stockées, pour ne jamais risquer qu'elles se
-désynchronisent de la vraie progression.
+`mastery_pct`/`next_review` ne sont **pas** des colonnes ici — voir §4.
 
 ```sql
 -- Mode Étude : nouvelles tables study_*
 -- Ajout purement additif, aucune modification de progress ni de ses policies.
 
--- study_courses — un cours créé par l'utilisateur
 create table if not exists public.study_courses (
   id            uuid primary key default gen_random_uuid(),
   user_id       uuid not null references auth.users(id) on delete cascade,
@@ -153,16 +85,12 @@ create policy "study_courses_user_own"
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
--- study_course_files — fichiers uploadés (PDF, slides)
 create table if not exists public.study_course_files (
   id               uuid primary key default gen_random_uuid(),
   study_course_id  uuid not null references public.study_courses(id) on delete cascade,
   user_id          uuid not null references auth.users(id) on delete cascade,
   storage_path     text not null,
   filename         text not null,
-  -- Alias en lecture seule pour matcher app/etude/dashboard/page.tsx
-  -- (qui lit `f.file_name`) sans renommer la colonne source `filename`
-  -- utilisée par lib/study/queries.ts.
   file_name        text generated always as (filename) stored,
   status           text not null default 'pending'
                      check (status in ('pending', 'processing', 'done', 'error')),
@@ -179,17 +107,12 @@ create policy "study_course_files_user_own"
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
--- study_chapters — chapitres extraits (un par bloc logique du PDF)
 create table if not exists public.study_chapters (
   id               uuid primary key default gen_random_uuid(),
   study_course_id  uuid not null references public.study_courses(id) on delete cascade,
   user_id          uuid not null references auth.users(id) on delete cascade,
   "order"          integer not null,
 
-  -- Titres bilingues (ingestion IA + cours détaillé) et titre simple
-  -- (affichage dans app/etude/page.tsx et la page chapitre). title est
-  -- rempli automatiquement depuis title_de si non fourni — voir trigger
-  -- plus bas.
   title_de         text not null,
   title_fr         text not null,
   title            text,
@@ -201,9 +124,6 @@ create table if not exists public.study_chapters (
   code_snippets    jsonb not null default '[]'::jsonb,
   code_lang        text,
 
-  -- Dupliqué depuis study_courses.profile pour un accès direct depuis la
-  -- page chapitre (chapter.profile) sans jointure supplémentaire ; tenu
-  -- à jour automatiquement par trigger, jamais à écrire à la main.
   profile          text,
 
   source_file_id   uuid references public.study_course_files(id) on delete set null,
@@ -220,8 +140,6 @@ create policy "study_chapters_user_own"
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
--- Remplit title/profile automatiquement à l'insertion ou la mise à jour,
--- pour que le code applicatif n'ait jamais à les gérer en double.
 create or replace function public.study_chapters_fill_derived()
 returns trigger
 language plpgsql
@@ -244,7 +162,6 @@ create trigger study_chapters_fill_derived_trg
   before insert or update on public.study_chapters
   for each row execute function public.study_chapters_fill_derived();
 
--- study_lessons_cache — cours détaillé généré, mis en cache
 create table if not exists public.study_lessons_cache (
   study_chapter_id  uuid primary key references public.study_chapters(id) on delete cascade,
   content           jsonb not null,
@@ -272,7 +189,6 @@ create policy "study_lessons_cache_via_chapter"
     )
   );
 
--- study_flashcards — jeu de flashcards généré par chapitre
 create table if not exists public.study_flashcards (
   id               uuid primary key default gen_random_uuid(),
   study_chapter_id uuid not null references public.study_chapters(id) on delete cascade,
@@ -291,7 +207,6 @@ create policy "study_flashcards_user_own"
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
--- study_flashcards_progress — progression SM-2 par carte et par utilisateur
 create table if not exists public.study_flashcards_progress (
   flashcard_id    uuid not null references public.study_flashcards(id) on delete cascade,
   user_id         uuid not null references auth.users(id) on delete cascade,
@@ -315,34 +230,12 @@ create policy "study_flashcards_progress_user_own"
   with check (auth.uid() = user_id);
 ```
 
-**Ce que ce bloc crée**, en résumé :
+## 4. Vue de progression (`mastery_pct`, `next_review`)
 
-| Table | Rôle | RLS basé sur |
-|---|---|---|
-| `study_courses` | Un cours créé par toi (titre, profil détecté) | `user_id` direct |
-| `study_course_files` | Les PDF que tu uploades pour un cours | `user_id` direct |
-| `study_chapters` | Les chapitres extraits d'un PDF par l'IA | `user_id` direct |
-| `study_lessons_cache` | Le cours détaillé généré, mis en cache par chapitre | via jointure vers `study_chapters` |
-| `study_flashcards` | Les cartes de révision générées par chapitre | `user_id` direct |
-| `study_flashcards_progress` | Ta progression de révision espacée (SM-2) par carte | `user_id` direct |
-
----
-
-## 4. Requête — vue de progression (`mastery_pct`, `next_review`)
-
-`app/etude/page.tsx` lit `chapter.mastery_pct` et `chapter.next_review`
-directement sur chaque chapitre. Ces deux valeurs ne sont écrites nulle
-part dans le code actuel — elles doivent être **calculées**, pas
-stockées, sinon rien ne les tient à jour après chaque révision. La bonne
-solution PostgreSQL est une vue :
+Calculées à la volée depuis `study_flashcards_progress`, pas stockées —
+sinon désynchronisation garantie après chaque révision.
 
 ```sql
--- Vue qui calcule, pour chaque chapitre, la maîtrise (% de cartes en
--- ease_factor élevé / peu d'échecs récents) et la prochaine échéance de
--- révision (la carte due la plus proche), à partir de la table réelle
--- study_flashcards_progress. Recalculée à chaque lecture — jamais
--- désynchronisée, rien à maintenir manuellement dans le code applicatif.
-
 create or replace view public.study_chapters_with_progress as
 select
   c.*,
@@ -362,41 +255,20 @@ left join public.study_flashcards_progress p
 group by c.id;
 ```
 
-**Comment ça marche** :
-- `mastery_pct` = pourcentage de cartes du chapitre dont la dernière
-  révision était "good" ou "easy" avec un `ease_factor` déjà monté à 2.5+
-  (signe qu'elle est bien retenue). `0` si le chapitre n'a aucune carte
-  encore révisée — ce qui correspond exactement au filtre `neverExplored`
-  de `app/etude/page.tsx`.
-- `next_review` = la date d'échéance la plus proche parmi les cartes déjà
-  révisées au moins une fois. `null` si aucune carte n'a encore été
-  révisée (donc jamais "due" au sens de l'écran "Aujourd'hui").
+| Champ | Calcul | `null`/`0` quand |
+|---|---|---|
+| `mastery_pct` | % de cartes avec dernière note "good"/"easy" et `ease_factor >= 2.5` | `0` si aucune carte encore révisée |
+| `next_review` | Échéance la plus proche parmi les cartes déjà révisées | `null` si aucune carte encore révisée |
 
-**Une vue hérite automatiquement du RLS des tables sous-jacentes** —
-comme `study_chapters` a déjà une policy RLS, cette vue est
-automatiquement filtrée par utilisateur, sans policy à ajouter dessus.
+RLS hérité automatiquement de `study_chapters` — pas de policy à ajouter sur la vue.
 
-**Changement côté code requis** (à faire quand tu seras prêt à reprendre
-le développement, pas maintenant) : `lib/study/lesson-queries.ts` devra
-lire depuis `study_chapters_with_progress` plutôt que `study_chapters`
-dans `listAllStudyChaptersForUser`, pour que `mastery_pct`/`next_review`
-arrivent jusqu'à `app/etude/page.tsx`. Je ne touche pas au code
-maintenant, seulement à la base — tu me diras quand relancer ce chantier.
+**Code à mettre à jour plus tard** (pas fait ici) : `lib/study/lesson-queries.ts` → lire `study_chapters_with_progress` au lieu de `study_chapters` dans `listAllStudyChaptersForUser`.
 
----
+## 5. Bucket Storage
 
-## 5. Requête — bucket de stockage des fichiers uploadés
-
-Une fois les sections 3 et 4 exécutées avec succès, copie-colle ce bloc.
+Chemin attendu : `{user_id}/{study_course_id}/{filename}` — upload direct client → Storage (pas de route API, limite de payload trop basse pour des PDF complets).
 
 ```sql
--- Bucket de stockage pour les fichiers de cours uploadés dans le mode
--- étude (/etude). Upload direct client → Storage (pas via une route API
--- Next, qui a une limite de payload trop basse pour des PDF de cours
--- complets). Chemin attendu : {user_id}/{study_course_id}/{filename},
--- pour que les policies RLS puissent s'appuyer sur le premier segment
--- du chemin.
-
 insert into storage.buckets (id, name, public)
 values ('study-course-files', 'study-course-files', false)
 on conflict (id) do nothing;
@@ -415,20 +287,12 @@ create policy "Users manage their own study course files"
   );
 ```
 
-**Pourquoi `public = false`** : le bucket est privé — les fichiers ne
-sont jamais accessibles par une URL publique directe. Seul un
-utilisateur authentifié dont l'ID correspond au premier segment du
-chemin de stockage peut lire/écrire son propre fichier.
-
-**Vérification après exécution** : onglet **Storage** du dashboard, le
-bucket `study-course-files` doit apparaître avec un cadenas (privé).
-
----
+Bucket privé (`public = false`) — vérifier après coup : onglet **Storage**, cadenas visible.
 
 ## 6. Vérification finale
 
 ```sql
--- 1. Tables présentes, RLS actif, au moins une policy chacune
+-- 1. Tables + RLS + policies
 select
   t.table_name,
   (select count(*) from pg_policies p where p.tablename = t.table_name) as nb_policies,
@@ -439,69 +303,36 @@ where t.table_schema = 'public'
   and t.table_name like 'study_%'
 order by t.table_name;
 
--- 2. La vue de progression existe et se lit sans erreur
+-- 2. Vue OK
 select * from public.study_chapters_with_progress limit 1;
 
--- 3. Le bucket existe et est privé
+-- 3. Bucket privé
 select id, public from storage.buckets where id = 'study-course-files';
 ```
 
-Résultat attendu : 6 lignes dans la première requête, `rls_active = true`
-partout, `nb_policies >= 1` partout ; la deuxième requête ne renvoie pas
-d'erreur (même si elle renvoie 0 ligne, faute de données) ; la troisième
-renvoie une ligne avec `public = false`.
-
-Si une ligne de la première requête a `rls_active = false` ou
-`nb_policies = 0`, ne lance pas l'app dessus tant que ce n'est pas
-corrigé — ça exposerait les données de tous les utilisateurs à tous les
-autres utilisateurs authentifiés.
-
----
-
-## 7. À reporter dans le fichier de migration versionné (plus tard)
-
-Ce document contient le SQL de référence à exécuter maintenant dans le
-dashboard. Le fichier `supabase/migrations/0003_study_mode.sql` du dépôt
-n'a **pas** été mis à jour avec ce contenu — je n'ai touché à aucun
-fichier de code dans ce tour, uniquement à ce document. Quand tu seras
-prêt à reprendre le code, il faudra reporter le SQL des sections 3 et 4
-dans le fichier de migration (et créer un `0005_study_progress_view.sql`
-séparé pour la vue, par cohérence avec le découpage existant), pour que
-`supabase db push` reste la source de vérité à terme.
-
----
-
-## 8. Empêcher la mise en pause automatique (plan Free)
-
-Supabase met un projet **Free** en pause après ~7 jours sans activité —
-le projet redémarre en quelques secondes au premier appel et aucune
-donnée n'est perdue, mais ça peut surprendre si tu n'as pas ouvert l'app
-depuis un moment (temps de réveil visible sur le premier chargement).
-
-**Décision prise** : rester sur Supabase et empêcher la pause via un ping
-automatique, plutôt que migrer vers une autre plateforme (Appwrite a été
-envisagé, mais aurait demandé de réécrire toute l'authentification,
-l'accès aux données et le storage — y compris pour le mode Klausur
-existant qui fonctionne déjà, pas seulement le mode étude).
-
-Le fichier `.github/workflows/supabase-keepalive.yml` fait une requête
-légère toutes les 3 jours vers l'API Supabase (largement sous le seuil de
-7 jours). Il te reste à configurer les secrets du dépôt GitHub pour que
-ce job fonctionne :
-
-1. Sur GitHub, va sur le dépôt → **Settings → Secrets and variables → Actions**.
-2. **New repository secret**, crée les deux secrets suivants :
-
-| Nom du secret | Valeur |
+| Attendu | Requête |
 |---|---|
-| `SUPABASE_URL` | La même valeur que `NEXT_PUBLIC_SUPABASE_URL` dans ton `.env.local` |
-| `SUPABASE_ANON_KEY` | La même valeur que `NEXT_PUBLIC_SUPABASE_ANON_KEY` dans ton `.env.local` |
+| 6 lignes, `rls_active = true`, `nb_policies >= 1` partout | #1 |
+| Pas d'erreur (0 ligne OK) | #2 |
+| 1 ligne, `public = false` | #3 |
 
-Ce sont les clés **publiques** (`anon`), protégées par RLS côté Supabase
-— aucun risque à les mettre en secret GitHub, ce sont les mêmes valeurs
-déjà exposées côté navigateur dans l'app.
+Si `rls_active = false` ou `nb_policies = 0` quelque part : ne pas lancer l'app dessus — ça exposerait les données de tous les utilisateurs entre eux.
 
-**Vérifier que ça marche** : onglet **Actions** du dépôt GitHub →
-`Supabase keepalive` → **Run workflow** (bouton manuel, `workflow_dispatch`)
-pour tester tout de suite sans attendre le prochain cycle de 3 jours. Un
-run vert confirme que le ping atteint bien la base.
+## 7. Reste à faire (plus tard, pas maintenant)
+
+Reporter le SQL des §3/§4 dans `supabase/migrations/0003_study_mode.sql` (+ un `0005_study_progress_view.sql` séparé pour la vue), pour que `supabase db push` redevienne la source de vérité.
+
+## 8. Empêcher la pause Supabase (plan Free)
+
+Décision : ping GitHub Actions plutôt que migrer vers Appwrite (aurait demandé de réécrire auth/données/storage pour tout le projet, y compris le mode Klausur existant). Fichier : `.github/workflows/supabase-keepalive.yml`, ping toutes les 3 jours (seuil de pause : ~7 jours).
+
+À faire : Repo GitHub → **Settings → Secrets and variables → Actions** → créer :
+
+| Secret | Valeur |
+|---|---|
+| `SUPABASE_URL` | = `NEXT_PUBLIC_SUPABASE_URL` de `.env.local` |
+| `SUPABASE_ANON_KEY` | = `NEXT_PUBLIC_SUPABASE_ANON_KEY` de `.env.local` |
+
+Clés publiques, protégées par RLS — même valeurs déjà exposées côté navigateur.
+
+Test manuel : onglet **Actions** → `Supabase keepalive` → **Run workflow**.
