@@ -2,17 +2,15 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, BookOpen, Sparkles, Zap, Lightbulb } from "lucide-react"
-import { Spinner } from "@/components/ui/spinner"
+import { ArrowLeft, Zap, Lightbulb } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { getApiErrorMessage } from "@/lib/api-errors"
-import { listStudyChapters } from "@/lib/study/lesson-queries"
-import { getStudyChapter } from "@/lib/study/lesson-queries"
+import { listStudyChapters, getStudyChapter, type StudyChapterWithCourseTitle } from "@/lib/study/lesson-queries"
 import { DetailedLessonView } from "@/components/study/detailed-lesson-view"
 import { FlashcardReview } from "@/components/study/flashcard-review"
 import { SpeedRound } from "@/components/study/exercises/speed-round"
 import { getExerciseSlots } from "@/lib/study/exercise-strategy"
-import type { StudyChapter, StudyCourse, CourseProfile } from "@/lib/study/types"
+import type { StudyChapter } from "@/lib/study/types"
 import type { Lang } from "@/lib/chapters/types"
 
 export default function StudyChapterPage({
@@ -20,9 +18,8 @@ export default function StudyChapterPage({
 }: {
   params: Promise<{ courseId: string; id: string }>
 }) {
-  const [chapter, setChapter] = useState<StudyChapter | null>(null)
+  const [chapter, setChapter] = useState<StudyChapterWithCourseTitle | null>(null)
   const [allChapters, setAllChapters] = useState<StudyChapter[]>([])
-  const [course, setCourse] = useState<StudyCourse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -44,19 +41,6 @@ export default function StudyChapterPage({
     })
     return () => { cancelled = true }
   }, [params])
-
-  // Derive course metadata from chapter
-  useEffect(() => {
-    if (chapter) {
-      setCourse({
-        id: chapter.study_course_id,
-        user_id: "",
-        title: chapter.course_title,
-        profile: chapter.profile,
-        created_at: "",
-      } as StudyCourse)
-    }
-  }, [chapter])
 
   if (loading) {
     return (
