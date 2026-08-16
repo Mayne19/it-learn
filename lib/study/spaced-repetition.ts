@@ -1,65 +1,60 @@
-import type { FlashcardGrade } from "./types"
+export type Grade = "again" | "hard" | "good" | "easy"
 
-export interface ReviewState {
-  intervalDays: number
-  easeFactor: number
-  dueAt: string
+interface CardState {
+  interval_days: number
+  ease_factor: number
+  reviews: number
 }
 
-const MIN_EASE_FACTOR = 1.3
-const INITIAL_EASE_FACTOR = 2.5
-
-function addDays(from: Date, days: number): Date {
-  const result = new Date(from)
-  result.setUTCDate(result.getUTCDate() + days)
-  return result
-}
+const MIN_EASE = 1.3
 
 /**
- * SM-2 simplifié : "again" réinitialise l'intervalle, les trois autres notes
- * font grandir l'intervalle en ajustant le facteur de facilité. Fonction pure
- * — aucun accès réseau ni horloge implicite, `now` est injecté pour rester
- * testable avec des dates simulées.
+ * SM-2 simplifié : calcule le prochain état d'une carte après un grade.
+ * Logique pure, pas d'effet de bord, testable sans mock.
+ *
+ * - again : on recommence (interval = 1), ease baisse
+ * - hard : interval × 1.2, ease baisse légèrement
+ * - good : interval × ease_factor, ease stable ou léger bonus
+ * - easy : interval × ease_factor × 1.3, ease augmente
  */
-export function scheduleNext(
-  state: ReviewState | null,
-  grade: FlashcardGrade,
-  now: Date = new Date()
-): ReviewState {
-  const current: ReviewState = state ?? {
-    intervalDays: 0,
-    easeFactor: INITIAL_EASE_FACTOR,
-    dueAt: now.toISOString(),
-  }
+export function scheduleNext(state: CardState, grade: Grade): CardState {
+  const { interval_days, ease_factor, reviews } = state
 
-  if (grade === "again") {
-    return {
-      intervalDays: 0,
-      easeFactor: Math.max(MIN_EASE_FACTOR, current.easeFactor - 0.2),
-      dueAt: addDays(now, 1).toISOString(),
+  switch (grade) {
+    case "again":
+      return {
+        interval_days: 1,
+        ease_factor: Math.max(MIN_EASE, ease_factor - 0.2),
+        reviews: reviews + 1,
+      }
+
+    case "hard":
+      return {
+        interval_days: Math.max(1, Math.ceil(interval_days * 1.2)),
+        ease_factor: Math.max(MIN_EASE, ease_factor - 0.15),
+        reviews: reviews + 1,
+      }
+
+    case "good": {
+      const newEase = reviews === 0
+        ? ease_factor
+        : Math.min(ease_factor + 0.05, 3.0)
+      return {
+        interval_days: Math.max(1, Math.ceil(interval_days * ease_factor)),
+        ease_factor: newEase,
+        reviews: reviews + 1,
+      }
     }
-  }
 
-  const easeDelta = grade === "hard" ? -0.15 : grade === "easy" ? 0.15 : 0
-  const nextEaseFactor = Math.max(MIN_EASE_FACTOR, current.easeFactor + easeDelta)
-
-  let nextIntervalDays: number
-  if (current.intervalDays === 0) {
-    nextIntervalDays = grade === "hard" ? 1 : grade === "easy" ? 4 : 1
-  } else if (current.intervalDays === 1) {
-    nextIntervalDays = grade === "hard" ? 2 : grade === "easy" ? 8 : 6
-  } else {
-    const multiplier = grade === "hard" ? 1.2 : nextEaseFactor
-    nextIntervalDays = Math.round(current.intervalDays * multiplier)
-  }
-
-  return {
-    intervalDays: nextIntervalDays,
-    easeFactor: nextEaseFactor,
-    dueAt: addDays(now, nextIntervalDays).toISOString(),
+    case "easy":
+      return {
+        interval_days: Math.max(1, Math.ceil(interval_days * ease_factor * 1.3)),
+        ease_factor: Math.min(ease_factor + 0.15, 3.0),
+        reviews: reviews + 1,
+      }
   }
 }
 
-export function isDue(state: ReviewState, now: Date = new Date()): boolean {
-  return new Date(state.dueAt).getTime() <= now.getTime()
+export function daysUntilDue(state: CardState, grade: Grade): number {
+  return scheduleNext(state, grade).interval_days
 }
