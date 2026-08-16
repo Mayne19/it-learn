@@ -468,3 +468,40 @@ prêt à reprendre le code, il faudra reporter le SQL des sections 3 et 4
 dans le fichier de migration (et créer un `0005_study_progress_view.sql`
 séparé pour la vue, par cohérence avec le découpage existant), pour que
 `supabase db push` reste la source de vérité à terme.
+
+---
+
+## 8. Empêcher la mise en pause automatique (plan Free)
+
+Supabase met un projet **Free** en pause après ~7 jours sans activité —
+le projet redémarre en quelques secondes au premier appel et aucune
+donnée n'est perdue, mais ça peut surprendre si tu n'as pas ouvert l'app
+depuis un moment (temps de réveil visible sur le premier chargement).
+
+**Décision prise** : rester sur Supabase et empêcher la pause via un ping
+automatique, plutôt que migrer vers une autre plateforme (Appwrite a été
+envisagé, mais aurait demandé de réécrire toute l'authentification,
+l'accès aux données et le storage — y compris pour le mode Klausur
+existant qui fonctionne déjà, pas seulement le mode étude).
+
+Le fichier `.github/workflows/supabase-keepalive.yml` fait une requête
+légère toutes les 3 jours vers l'API Supabase (largement sous le seuil de
+7 jours). Il te reste à configurer les secrets du dépôt GitHub pour que
+ce job fonctionne :
+
+1. Sur GitHub, va sur le dépôt → **Settings → Secrets and variables → Actions**.
+2. **New repository secret**, crée les deux secrets suivants :
+
+| Nom du secret | Valeur |
+|---|---|
+| `SUPABASE_URL` | La même valeur que `NEXT_PUBLIC_SUPABASE_URL` dans ton `.env.local` |
+| `SUPABASE_ANON_KEY` | La même valeur que `NEXT_PUBLIC_SUPABASE_ANON_KEY` dans ton `.env.local` |
+
+Ce sont les clés **publiques** (`anon`), protégées par RLS côté Supabase
+— aucun risque à les mettre en secret GitHub, ce sont les mêmes valeurs
+déjà exposées côté navigateur dans l'app.
+
+**Vérifier que ça marche** : onglet **Actions** du dépôt GitHub →
+`Supabase keepalive` → **Run workflow** (bouton manuel, `workflow_dispatch`)
+pour tester tout de suite sans attendre le prochain cycle de 3 jours. Un
+run vert confirme que le ping atteint bien la base.
