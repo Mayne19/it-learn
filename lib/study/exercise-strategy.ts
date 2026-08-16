@@ -1,32 +1,53 @@
-import type { CourseProfile, ExerciseTypeWeight, StudyChapter } from "./types"
+import type { CourseProfile, StudyExerciseType } from "./types"
 
-const PROGRAMMING_MIX: ExerciseTypeWeight[] = [
-  { exerciseType: "code", weight: 3 },
-  { exerciseType: "codeAnalysis", weight: 2 },
-  { exerciseType: "flashcard", weight: 2 },
-  { exerciseType: "mcq", weight: 1 },
-  { exerciseType: "speedRound", weight: 2 },
-]
+interface ExerciseSlot {
+  type: StudyExerciseType
+  weight: number
+  requires_code: boolean
+}
 
-const THEORY_MIX: ExerciseTypeWeight[] = [
-  { exerciseType: "flashcard", weight: 3 },
-  { exerciseType: "mcq", weight: 2 },
-  { exerciseType: "matching", weight: 1 },
-  { exerciseType: "trueFalse", weight: 1 },
-  { exerciseType: "speedRound", weight: 3 },
-]
+export function getExerciseSlots(profile: CourseProfile, hasCode: boolean): ExerciseSlot[] {
+  switch (profile) {
+    case "programming":
+      return [
+        { type: "speedRound",   weight: 0.20, requires_code: false },
+        { type: "code",         weight: 0.25, requires_code: true },
+        { type: "bugHunt",      weight: 0.20, requires_code: true },
+        { type: "fillBlank",    weight: 0.15, requires_code: false },
+        { type: "mcq",          weight: 0.10, requires_code: false },
+        { type: "codeAnalysis", weight: 0.10, requires_code: true },
+      ].filter(s => !s.requires_code || hasCode)
 
-/**
- * Dosage par défaut des types d'exercice, selon le profil de cours détecté
- * à l'ingestion. Table de règles pure — aucun appel IA. Pour un cours
- * "mixed", le dosage suit chapter.has_code chapitre par chapitre plutôt
- * qu'une moyenne globale sur tout le cours.
- */
-export function getExerciseMix(
-  profile: CourseProfile,
-  chapter: Pick<StudyChapter, "has_code">
-): ExerciseTypeWeight[] {
-  if (profile === "programming") return PROGRAMMING_MIX
-  if (profile === "theory") return THEORY_MIX
-  return chapter.has_code ? PROGRAMMING_MIX : THEORY_MIX
+    case "theory":
+      return [
+        { type: "speedRound",  weight: 0.20, requires_code: false },
+        { type: "mcq",         weight: 0.25, requires_code: false },
+        { type: "matching",    weight: 0.20, requires_code: false },
+        { type: "trueFalse",   weight: 0.15, requires_code: false },
+        { type: "fillBlank",   weight: 0.10, requires_code: false },
+        { type: "conceptMap",  weight: 0.10, requires_code: false },
+      ]
+
+    case "mixed":
+      return [
+        { type: "speedRound",   weight: 0.15, requires_code: false },
+        { type: "mcq",          weight: 0.15, requires_code: false },
+        { type: "code",         weight: 0.15, requires_code: true },
+        { type: "matching",     weight: 0.10, requires_code: false },
+        { type: "trueFalse",    weight: 0.10, requires_code: false },
+        { type: "bugHunt",      weight: 0.10, requires_code: true },
+        { type: "fillBlank",    weight: 0.10, requires_code: false },
+        { type: "conceptMap",   weight: 0.05, requires_code: false },
+      ].filter(s => !s.requires_code || hasCode)
+  }
+}
+
+export function pickRandomExerciseType(slots: ExerciseSlot[]): StudyExerciseType {
+  const total = slots.reduce((s, slot) => s + slot.weight, 0)
+  let rand = Math.random() * total
+  for (const slot of slots) {
+    rand -= slot.weight
+    if (rand <= 0) return slot.type
+  }
+  return slots[slots.length - 1].type
 }
