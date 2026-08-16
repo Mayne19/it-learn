@@ -32,10 +32,19 @@ export async function saveLessonToCache(studyChapterId: string, lesson: Detailed
   }
 }
 
-export async function getStudyChapter(studyChapterId: string): Promise<StudyChapter | null> {
+export interface StudyChapterWithCourseTitle extends StudyChapter {
+  course_title: string
+}
+
+/**
+ * Charge un chapitre avec le titre de son cours parent — la page chapitre
+ * (app/etude/[courseId]/kapitel/[id]/page.tsx) affiche course_title dans
+ * son fil d'Ariane et dérive un StudyCourse partiel depuis le retour.
+ */
+export async function getStudyChapter(studyChapterId: string): Promise<StudyChapterWithCourseTitle | null> {
   const { data, error } = await getSupabaseClient()
     .from("study_chapters")
-    .select("*")
+    .select("*, study_courses(title)")
     .eq("id", studyChapterId)
     .maybeSingle()
 
@@ -43,7 +52,10 @@ export async function getStudyChapter(studyChapterId: string): Promise<StudyChap
     throw new Error(`Impossible de charger le chapitre: ${error.message}`)
   }
 
-  return (data as StudyChapter) ?? null
+  if (!data) return null
+
+  const { study_courses, ...chapter } = data as StudyChapter & { study_courses: { title: string } | null }
+  return { ...chapter, course_title: study_courses?.title ?? "" }
 }
 
 export async function listStudyChapters(studyCourseId: string): Promise<StudyChapter[]> {
@@ -62,17 +74,23 @@ export async function listStudyChapters(studyCourseId: string): Promise<StudyCha
 
 /**
  * Tous les chapitres de tous les cours étude d'un utilisateur, avec le
- * titre du cours parent — alimente le tableau de bord "aujourd'hui"
- * (étape 6). RLS filtre déjà via study_courses.user_id, mais on filtre
- * explicitement pour ne dépendre que de ce que l'appelant a passé.
+ * titre du cours parent, la maîtrise (%) et la prochaine échéance de
+ * révision — alimente le tableau de bord "aujourd'hui" (app/etude/page.tsx).
+ * mastery_pct/next_review viennent de la vue study_chapters_with_progress
+ * (voir docs/db-anpassung.md §4) : calculées à la volée depuis
+ * study_flashcards_progress, jamais stockées ni à maintenir manuellement.
+ * RLS filtre déjà via study_courses.user_id, mais on filtre explicitement
+ * pour ne dépendre que de ce que l'appelant a passé.
  */
 export interface StudyChapterWithCourse extends StudyChapter {
   course_title: string
+  mastery_pct: number
+  next_review: string | null
 }
 
 export async function listAllStudyChaptersForUser(userId: string): Promise<StudyChapterWithCourse[]> {
   const { data, error } = await getSupabaseClient()
-    .from("study_chapters")
+    .from("study_chapters_with_progress")
     .select("*, study_courses!inner(user_id, title)")
     .eq("study_courses.user_id", userId)
 
@@ -81,7 +99,11 @@ export async function listAllStudyChaptersForUser(userId: string): Promise<Study
   }
 
   return (data ?? []).map(row => {
-    const { study_courses, ...chapter } = row as StudyChapter & { study_courses: { title: string } }
+    const { study_courses, ...chapter } = row as StudyChapter & {
+      mastery_pct: number
+      next_review: string | null
+      study_courses: { title: string }
+    }
     return { ...chapter, course_title: study_courses.title }
   })
 }
