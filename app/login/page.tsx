@@ -138,17 +138,17 @@ function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader className="text-center">
-        <div className="flex justify-center mb-2">
-          <BookOpen className="h-10 w-10 text-primary" />
+    <Card className="w-full max-w-sm border-border/70 shadow-xl shadow-black/[0.03] backdrop-blur-sm dark:shadow-black/20">
+      <CardHeader className="text-center pb-2">
+        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-ring to-success shadow-lg shadow-ring/20">
+          <BookOpen className="h-7 w-7 text-white" />
         </div>
-        <CardTitle className="text-2xl">IT Lernen</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-2xl tracking-tight">IT Lernen</CardTitle>
+        <CardDescription className="text-balance">
           Plateforme de révision Java & langages dynamiques pour vos examens en Allemagne
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-5 pt-2">
         {mode !== "forgot" && (
           <Tabs value={mode} onValueChange={(v) => switchMode(v as Mode)}>
             <TabsList className="w-full">
@@ -168,25 +168,27 @@ function LoginForm() {
         )}
 
         {sent ? (
-          <div className="text-center space-y-4 py-2">
-            <CheckCircle className="h-12 w-12 text-success mx-auto" />
+          <div className="animate-in fade-in zoom-in-95 space-y-4 py-2 text-center duration-300">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success/10">
+              <CheckCircle className="h-7 w-7 text-success" />
+            </div>
             <p className="font-medium">
               {mode === "forgot" ? "Lien de réinitialisation envoyé !" : "Email de confirmation envoyé !"}
             </p>
             <p className="text-sm text-muted-foreground">
-              Vérifiez votre email <strong>{email}</strong> et cliquez sur le lien.
+              Vérifiez votre email <strong className="text-foreground">{email}</strong> et cliquez sur le lien.
             </p>
             <Button variant="outline" size="sm" onClick={() => switchMode("signin")}>
               Retour à la connexion
             </Button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="animate-in fade-in space-y-4 duration-200">
             {mode === "forgot" && (
               <button
                 type="button"
                 onClick={() => switchMode("signin")}
-                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
                 <ArrowLeft className="h-3.5 w-3.5" /> Retour à la connexion
               </button>
@@ -195,7 +197,7 @@ function LoginForm() {
             <div className="space-y-2">
               <Label htmlFor="email">Adresse email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-2 h-4 w-4 text-muted-foreground" />
+                <Mail className="pointer-events-none absolute left-3 top-2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="email"
                   type="email"
@@ -223,7 +225,7 @@ function LoginForm() {
                   <button
                     type="button"
                     onClick={() => switchMode("forgot")}
-                    className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+                    className="text-xs text-muted-foreground transition-colors hover:text-foreground hover:underline"
                   >
                     Mot de passe oublié ?
                   </button>
@@ -270,10 +272,20 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[70vh]">
+    <div className="relative flex min-h-[80vh] flex-col items-center justify-center overflow-hidden px-4">
+      {/* Fond : dégradés radiaux subtils dans les couleurs du thème, ne capte aucun clic */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute left-1/2 top-0 h-[420px] w-[620px] -translate-x-1/2 rounded-full bg-ring/10 blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 h-[320px] w-[420px] rounded-full bg-success/10 blur-3xl" />
+      </div>
+
       <Suspense fallback={null}>
         <LoginForm />
       </Suspense>
+
+      <p className="mt-6 text-center text-xs text-muted-foreground">
+        Java · Langages dynamiques · Projektmanagement
+      </p>
     </div>
   )
 }
