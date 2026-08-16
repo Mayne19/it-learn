@@ -6,11 +6,12 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ArrowLeft, Layers } from "lucide-react"
+import { ArrowLeft, Layers, Zap } from "lucide-react"
 import { getStudyCourse } from "@/lib/study/queries"
 import { getStudyChapter } from "@/lib/study/lesson-queries"
 import { DetailedLessonView } from "@/components/study/detailed-lesson-view"
 import { FlashcardReview } from "@/components/study/flashcard-review"
+import { SpeedRound } from "@/components/study/exercises/speed-round"
 import { getExerciseMix } from "@/lib/study/exercise-strategy"
 import type { StudyCourse, StudyChapter } from "@/lib/study/types"
 import type { Lang } from "@/lib/chapters/types"
@@ -104,6 +105,14 @@ export default function StudyChapterPage() {
           ))}
         </div>
         <FlashcardReview chapter={chapter} />
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Zap className="h-4 w-4 text-warning" />
+          <h2 className="scroll-m-20 text-2xl font-semibold tracking-tight">Speed Round</h2>
+        </div>
+        <SpeedRound chapter={chapter} profile={course.profile} lang={lang} />
       </section>
     </div>
   )
