@@ -1,4 +1,5 @@
 import { getSupabaseClient } from "@/lib/supabase"
+import { uploadCourseFile, deleteCourseFile } from "./storage"
 import type { CourseProfile, StudyCourse, StudyCourseFile, StudyCourseFileStatus } from "./types"
 import type { IngestResult } from "./ingest-prompt"
 
@@ -6,6 +7,21 @@ export async function createStudyCourse(userId: string, title: string): Promise<
   const { data, error } = await getSupabaseClient()
     .from("study_courses")
     .insert({ user_id: userId, title, profile: "mixed" })
+    .select()
+    .single()
+
+  if (error || !data) {
+    throw new Error(`Impossible de créer le cours: ${error?.message ?? "erreur inconnue"}`)
+  }
+
+  return data as StudyCourse
+}
+
+/** Alias de createStudyCourse — utilisé par app/etude/dashboard/page.tsx, accepte le profil dès la création. */
+export async function createCourse(userId: string, title: string, profile: CourseProfile): Promise<StudyCourse> {
+  const { data, error } = await getSupabaseClient()
+    .from("study_courses")
+    .insert({ user_id: userId, title, profile })
     .select()
     .single()
 
@@ -42,6 +58,20 @@ export async function listStudyCourses(userId: string): Promise<StudyCourse[]> {
   }
 
   return (data ?? []) as StudyCourse[]
+}
+
+/** Alias de listStudyCourses — utilisé par app/etude/dashboard/page.tsx. */
+export const listCourses = listStudyCourses
+
+export async function deleteCourse(studyCourseId: string): Promise<void> {
+  const { error } = await getSupabaseClient()
+    .from("study_courses")
+    .delete()
+    .eq("id", studyCourseId)
+
+  if (error) {
+    throw new Error(`Impossible de supprimer le cours: ${error.message}`)
+  }
 }
 
 export async function createStudyCourseFile(
@@ -104,6 +134,51 @@ export async function listStudyCourseFiles(studyCourseId: string): Promise<Study
   return (data ?? []) as StudyCourseFile[]
 }
 
+/** Alias de listStudyCourseFiles — utilisé par app/etude/dashboard/page.tsx. */
+export const listFiles = listStudyCourseFiles
+
+/**
+ * Upload un fichier vers Supabase Storage puis enregistre la ligne
+ * correspondante dans study_course_files. Utilisé par
+ * app/etude/dashboard/page.tsx — combine storage.ts + createStudyCourseFile
+ * pour offrir une seule fonction "upload complet" au composant.
+ */
+export async function uploadFile(studyCourseId: string, file: File): Promise<StudyCourseFile> {
+  const { data: userData, error: userError } = await getSupabaseClient().auth.getUser()
+  if (userError || !userData.user) {
+    throw new Error("Utilisateur non authentifié")
+  }
+
+  const storagePath = await uploadCourseFile(userData.user.id, studyCourseId, file)
+  return createStudyCourseFile(studyCourseId, file.name, storagePath)
+}
+
+export async function deleteFile(studyCourseId: string, fileId: string): Promise<void> {
+  const { data, error: fetchError } = await getSupabaseClient()
+    .from("study_course_files")
+    .select("storage_path")
+    .eq("id", fileId)
+    .eq("study_course_id", studyCourseId)
+    .maybeSingle()
+
+  if (fetchError) {
+    throw new Error(`Impossible de charger le fichier: ${fetchError.message}`)
+  }
+
+  if (data?.storage_path) {
+    await deleteCourseFile(data.storage_path)
+  }
+
+  const { error } = await getSupabaseClient()
+    .from("study_course_files")
+    .delete()
+    .eq("id", fileId)
+
+  if (error) {
+    throw new Error(`Impossible de supprimer le fichier: ${error.message}`)
+  }
+}
+
 /**
  * Enregistre le découpage en chapitres validé par l'utilisateur, met à
  * jour le profil détecté du cours, et rattache les chapitres au fichier
@@ -120,7 +195,7 @@ export async function saveIngestResult(
 
   const { error: profileError } = await client
     .from("study_courses")
-    .update({ profile: ingestResult.profile as CourseProfile, detected_language: ingestResult.detected_language })
+    .update({ profile: ingestResult.profile as CourseProfile, detected_lang: ingestResult.detected_language })
     .eq("id", studyCourseId)
 
   if (profileError) {
