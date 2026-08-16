@@ -7,43 +7,66 @@ export interface StudyCourse {
   user_id: string
   title: string
   profile: CourseProfile
-  detected_language: Lang | null
+  detected_lang: Lang | null
   created_at: string
 }
-
-export type StudyCourseFileStatus = "pending" | "processing" | "done" | "error"
 
 export interface StudyCourseFile {
   id: string
   study_course_id: string
-  filename: string
+  user_id: string
   storage_path: string
-  status: StudyCourseFileStatus
+  filename: string
+  status: "pending" | "processing" | "done" | "error"
   error_message: string | null
   uploaded_at: string
+  processed_at: string | null
 }
 
 export interface StudyChapter {
   id: string
   study_course_id: string
+  user_id: string
   order: number
   title_de: string
   title_fr: string
   concepts: string[]
   summary: string
   has_code: boolean
-  source_file_id: string
+  source_file_id: string | null
+  created_at: string
+}
+
+export interface LessonCache {
+  study_chapter_id: string
+  content: DetailedLesson
+  model: string
+  generated_at: string
+}
+
+export interface DetailedLesson {
+  title_de: string
+  intro_fr: string
+  sections: {
+    heading_de: string
+    content_de: string
+    content_fr: string | null
+    code: string | null
+    method_fr: string
+    example_concret: string | null
+  }[]
+  key_points_de: string[]
+  traps: { trap_de: string; trap_fr: string }[]
 }
 
 export interface Flashcard {
   id: string
   study_chapter_id: string
+  user_id: string
   front_de: string
   back_de: string
   back_fr: string
 }
-
-export type FlashcardGrade = "again" | "hard" | "good" | "easy"
 
 export interface FlashcardProgress {
   flashcard_id: string
@@ -51,18 +74,17 @@ export interface FlashcardProgress {
   interval_days: number
   ease_factor: number
   due_at: string
-  last_grade: FlashcardGrade | null
+  last_grade: "again" | "hard" | "good" | "easy" | null
+  reviews: number
 }
 
-/** One completed exercise attempt, used by the next-up selection algorithm. */
-export interface ExerciseHistoryEntry {
-  study_chapter_id: string
-  exercise_type: string
-  correct: boolean
-  answered_at: string
-}
-
-export interface ExerciseTypeWeight {
-  exerciseType: string
-  weight: number
-}
+export type StudyExerciseType =
+  | "mcq"
+  | "matching"
+  | "trueFalse"
+  | "fillBlank"
+  | "codeAnalysis"
+  | "code"
+  | "speedRound"
+  | "bugHunt"
+  | "conceptMap"
