@@ -6,10 +6,12 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Layers } from "lucide-react"
 import { getStudyCourse } from "@/lib/study/queries"
 import { getStudyChapter } from "@/lib/study/lesson-queries"
 import { DetailedLessonView } from "@/components/study/detailed-lesson-view"
+import { FlashcardReview } from "@/components/study/flashcard-review"
+import { getExerciseMix } from "@/lib/study/exercise-strategy"
 import type { StudyCourse, StudyChapter } from "@/lib/study/types"
 import type { Lang } from "@/lib/chapters/types"
 
@@ -57,6 +59,7 @@ export default function StudyChapterPage() {
   }
 
   const lang: Lang = course.detected_language ?? "none"
+  const exerciseMix = getExerciseMix(course.profile, chapter)
 
   return (
     <div className="mx-auto max-w-4xl space-y-7 sm:space-y-8">
@@ -87,6 +90,21 @@ export default function StudyChapterPage() {
       </Card>
 
       <DetailedLessonView chapter={chapter} lang={lang} />
+
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Layers className="h-4 w-4 text-ring" />
+          <h2 className="scroll-m-20 text-2xl font-semibold tracking-tight">Lernkartei</h2>
+        </div>
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {exerciseMix.map(m => (
+            <Badge key={m.exerciseType} variant="outline" className="text-xs">
+              {m.exerciseType} · poids {m.weight}
+            </Badge>
+          ))}
+        </div>
+        <FlashcardReview chapter={chapter} />
+      </section>
     </div>
   )
 }
