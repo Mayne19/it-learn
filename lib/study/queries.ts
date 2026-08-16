@@ -63,6 +63,19 @@ export async function updateStudyCourseFileStatus(
   }
 }
 
+export async function countStudyChapters(studyCourseId: string): Promise<number> {
+  const { count, error } = await getSupabaseClient()
+    .from("study_chapters")
+    .select("id", { count: "exact", head: true })
+    .eq("study_course_id", studyCourseId)
+
+  if (error) {
+    throw new Error(`Impossible de compter les chapitres: ${error.message}`)
+  }
+
+  return count ?? 0
+}
+
 export async function listStudyCourseFiles(studyCourseId: string): Promise<StudyCourseFile[]> {
   const { data, error } = await getSupabaseClient()
     .from("study_course_files")
