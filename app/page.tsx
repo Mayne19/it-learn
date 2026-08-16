@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Gauge } from "@/components/gauge"
-import { BookOpen, ClipboardList, Coffee, Sparkles, Zap } from "lucide-react"
+import { BookOpen, ClipboardList, Coffee, Sparkles, Zap, GraduationCap, ArrowRight } from "lucide-react"
 
 interface ProgressRow {
   course_id: string
@@ -83,6 +83,25 @@ export default function HomePage() {
 
   return (
     <div className="space-y-7 sm:space-y-8">
+      {/* Point d'entrée vers le mode révision quotidienne (/etude) — espace
+          distinct du mode Klausur ci-dessous, sa propre navigation (sidebar). */}
+      <Link href="/etude">
+        <Card className="cursor-pointer border border-ring/25 bg-gradient-to-br from-ring/[0.06] to-success/[0.06] shadow-none transition-colors hover:border-ring/45 hover:from-ring/10 hover:to-success/10">
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-ring to-success text-white shadow-sm">
+              <GraduationCap className="h-6 w-6" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-lg font-semibold">Étude — révision quotidienne</p>
+              <p className="text-sm text-muted-foreground">
+                Importe tes cours, révise avec des flashcards et des Speed Rounds
+              </p>
+            </div>
+            <ArrowRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+          </CardContent>
+        </Card>
+      </Link>
+
       {/* Each course tracks its own progress — there is no cross-course score. */}
       <div className="flex items-center gap-3">
         <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg text-ring bg-ring/10">
