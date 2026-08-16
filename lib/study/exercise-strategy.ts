@@ -8,18 +8,20 @@ interface ExerciseSlot {
 
 export function getExerciseSlots(profile: CourseProfile, hasCode: boolean): ExerciseSlot[] {
   switch (profile) {
-    case "programming":
-      return [
+    case "programming": {
+      const slots: ExerciseSlot[] = [
         { type: "speedRound",   weight: 0.20, requires_code: false },
         { type: "code",         weight: 0.25, requires_code: true },
         { type: "bugHunt",      weight: 0.20, requires_code: true },
         { type: "fillBlank",    weight: 0.15, requires_code: false },
         { type: "mcq",          weight: 0.10, requires_code: false },
         { type: "codeAnalysis", weight: 0.10, requires_code: true },
-      ].filter(s => !s.requires_code || hasCode)
+      ]
+      return slots.filter(s => !s.requires_code || hasCode)
+    }
 
-    case "theory":
-      return [
+    case "theory": {
+      const slots: ExerciseSlot[] = [
         { type: "speedRound",  weight: 0.20, requires_code: false },
         { type: "mcq",         weight: 0.25, requires_code: false },
         { type: "matching",    weight: 0.20, requires_code: false },
@@ -27,9 +29,11 @@ export function getExerciseSlots(profile: CourseProfile, hasCode: boolean): Exer
         { type: "fillBlank",   weight: 0.10, requires_code: false },
         { type: "conceptMap",  weight: 0.10, requires_code: false },
       ]
+      return slots
+    }
 
-    case "mixed":
-      return [
+    case "mixed": {
+      const slots: ExerciseSlot[] = [
         { type: "speedRound",   weight: 0.15, requires_code: false },
         { type: "mcq",          weight: 0.15, requires_code: false },
         { type: "code",         weight: 0.15, requires_code: true },
@@ -38,7 +42,9 @@ export function getExerciseSlots(profile: CourseProfile, hasCode: boolean): Exer
         { type: "bugHunt",      weight: 0.10, requires_code: true },
         { type: "fillBlank",    weight: 0.10, requires_code: false },
         { type: "conceptMap",   weight: 0.05, requires_code: false },
-      ].filter(s => !s.requires_code || hasCode)
+      ]
+      return slots.filter(s => !s.requires_code || hasCode)
+    }
   }
 }
 
