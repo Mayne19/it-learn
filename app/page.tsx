@@ -84,8 +84,11 @@ export default function HomePage() {
   return (
     <div className="space-y-7 sm:space-y-8">
       {/* Point d'entrée vers le mode révision quotidienne (/etude) — espace
-          distinct du mode Klausur ci-dessous, sa propre navigation (sidebar). */}
-      <Link href="/etude">
+          distinct du mode Klausur ci-dessous, sa propre navigation (sidebar).
+          mb-2 supplémentaire en plus du space-y du parent : la carte a son
+          propre fond/bordure et se distinguait mal du bloc "Vos cours" juste
+          en dessous sans un peu plus d'air. */}
+      <Link href="/etude" className="block mb-2 sm:mb-3">
         <Card className="cursor-pointer border border-ring/25 bg-gradient-to-br from-ring/[0.06] to-success/[0.06] shadow-none transition-colors hover:border-ring/45 hover:from-ring/10 hover:to-success/10">
           <CardContent className="flex items-center gap-4 p-5">
             <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-ring to-success text-white shadow-sm">
@@ -109,7 +112,7 @@ export default function HomePage() {
         </div>
         <div>
           <p className="text-lg font-semibold">Vos cours</p>
-          <p className="text-sm text-muted-foreground">{COURSES.length} cours disponibles — chaque cours a sa propre progression</p>
+          <p className="text-sm text-muted-foreground">{COURSES.length} cours — progression indépendante</p>
         </div>
       </div>
       {progressError && (
