@@ -194,6 +194,11 @@ export async function saveIngestResult(
 ): Promise<void> {
   const client = getSupabaseClient()
 
+  const { data: userData, error: userError } = await client.auth.getUser()
+  if (userError || !userData.user) {
+    throw new Error("Utilisateur non authentifié")
+  }
+
   const { error: profileError } = await client
     .from("study_courses")
     .update({ profile: ingestResult.profile as CourseProfile, detected_lang: ingestResult.detected_language })
@@ -205,6 +210,7 @@ export async function saveIngestResult(
 
   const rows = ingestResult.chapters.map(chapter => ({
     study_course_id: studyCourseId,
+    user_id: userData.user.id,
     order: chapter.order + chapterOrderOffset,
     title_de: chapter.title_de,
     title_fr: chapter.title_fr,
