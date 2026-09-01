@@ -12,6 +12,7 @@ import {
   listAllStudyChaptersForUser,
   type StudyChapterWithCourse,
 } from "@/lib/study/lesson-queries"
+import { listStudyCourses } from "@/lib/study/queries"
 
 interface CourseSummary {
   courseId: string
@@ -21,8 +22,8 @@ interface CourseSummary {
 }
 
 export default function EtudeDashboardPage() {
-  const [userId, setUserId] = useState<string | null>(null)
   const [chapters, setChapters] = useState<StudyChapterWithCourse[]>([])
+  const [hasCourses, setHasCourses] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -31,11 +32,18 @@ export default function EtudeDashboardPage() {
     async function run() {
       const { data: { user } } = await getSupabaseClient().auth.getUser()
       if (cancelled || !user) return
-      setUserId(user.id)
       try {
-        const all = await listAllStudyChaptersForUser(user.id)
+        // Distinguer "aucun cours créé" de "cours créé, chapitres pas encore
+        // générés" — sans ça, les deux affichaient le même écran vide
+        // trompeur ("Crée ton premier cours") alors que dans le second cas
+        // le cours existe déjà, il manque juste l'étape de génération.
+        const [all, courses] = await Promise.all([
+          listAllStudyChaptersForUser(user.id),
+          listStudyCourses(user.id),
+        ])
         if (cancelled) return
         setChapters(all)
+        setHasCourses(courses.length > 0)
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e))
       } finally {
@@ -119,15 +127,24 @@ export default function EtudeDashboardPage() {
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-ring/10">
               <BookOpen className="h-6 w-6 text-ring" />
             </div>
-            <div className="space-y-1">
-              <p className="text-lg font-semibold">Aucun cours encore</p>
-              <p className="text-sm text-muted-foreground max-w-sm">
-                Crée ton premier cours dans le tableau de bord pour commencer à réviser.
-              </p>
-            </div>
+            {hasCourses ? (
+              <div className="space-y-1">
+                <p className="text-lg font-semibold">Aucun chapitre généré pour l&apos;instant</p>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  Ton cours existe déjà — il manque juste l&apos;étape de génération. Ouvre-le pour lancer la génération des chapitres à partir du PDF importé.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <p className="text-lg font-semibold">Aucun cours encore</p>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  Crée ton premier cours dans le tableau de bord pour commencer à réviser.
+                </p>
+              </div>
+            )}
             <Link href="/etude/dashboard">
               <Button>
-                Créer un cours <ArrowRight className="ml-2 h-4 w-4" />
+                {hasCourses ? "Voir mes cours" : "Créer un cours"} <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
           </CardContent>
