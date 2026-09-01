@@ -98,9 +98,12 @@ export function TrueFalseExercise({ data, lang, onResult, onNext, onBack }: Prop
               </div>
 
               {submitted && (
-                <div className={cn("text-sm p-2 rounded", correct ? "text-success" : "text-destructive")}>
-                  <span className="font-medium">{stmt.is_true ? '✓ Wahr' : '✗ Falsch'} — </span>
-                  {showFr ? stmt.explanation_fr : stmt.explanation_de}
+                <div className={cn("flex items-start gap-1.5 text-sm p-2 rounded", correct ? "text-success" : "text-destructive")}>
+                  {stmt.is_true ? <CheckCircle2 className="h-4 w-4 flex-shrink-0 mt-0.5" /> : <XCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />}
+                  <span>
+                    <span className="font-medium">{stmt.is_true ? 'Wahr' : 'Falsch'} — </span>
+                    {showFr ? stmt.explanation_fr : stmt.explanation_de}
+                  </span>
                 </div>
               )}
             </div>

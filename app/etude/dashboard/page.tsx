@@ -13,6 +13,7 @@ import { Spinner } from "@/components/ui/spinner"
 import {
   ArrowLeft, Plus, FileText, Trash2, AlertCircle,
   CheckCircle2, BookOpen, FileUp, ArrowRight,
+  Code2, BookMarked, Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getSupabaseClient } from "@/lib/supabase"
@@ -20,10 +21,10 @@ import { getApiErrorMessage } from "@/lib/api-errors"
 import { listCourses, createCourse, deleteCourse, listFiles, uploadFile, deleteFile } from "@/lib/study/queries"
 import type { CourseProfile, StudyCourse, StudyCourseFile } from "@/lib/study/types"
 
-const PROFILE_LABELS: Record<CourseProfile, { label: string; desc: string; icon: string }> = {
-  programming: { label: "Programmation", desc: "Exercices de code, Bug Hunt, analyse", icon: "</>" },
-  theory:      { label: "Théorie", desc: "QCM, appariements, vrai/faux", icon: "📖" },
-  mixed:       { label: "Mixte", desc: "Combinaison équilibrée", icon: "⚡" },
+const PROFILE_LABELS: Record<CourseProfile, { label: string; desc: string; icon: typeof Code2 }> = {
+  programming: { label: "Programmation", desc: "Exercices de code, Bug Hunt, analyse", icon: Code2 },
+  theory:      { label: "Théorie", desc: "QCM, appariements, vrai/faux", icon: BookMarked },
+  mixed:       { label: "Mixte", desc: "Combinaison équilibrée", icon: Zap },
 }
 
 export default function EtudeDashboardManager() {
@@ -188,7 +189,7 @@ export default function EtudeDashboardManager() {
           <div className="space-y-2">
             <Label>Profil</Label>
             <div className="grid grid-cols-3 gap-2">
-              {(Object.entries(PROFILE_LABELS) as [CourseProfile, typeof PROFILE_LABELS[CourseProfile]][]).map(([key, { label, desc, icon }]) => (
+              {(Object.entries(PROFILE_LABELS) as [CourseProfile, typeof PROFILE_LABELS[CourseProfile]][]).map(([key, { label, desc, icon: Icon }]) => (
                 <button
                   key={key}
                   type="button"
@@ -200,7 +201,7 @@ export default function EtudeDashboardManager() {
                       : "border-border/70 hover:border-ring/40 hover:bg-muted/40",
                   )}
                 >
-                  <span className="text-lg">{icon}</span>
+                  <Icon className="h-5 w-5" />
                   <p className="text-sm font-medium mt-1">{label}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
                 </button>
@@ -249,8 +250,8 @@ export default function EtudeDashboardManager() {
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold truncate">{course.title}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="secondary" className="text-xs">
-                          {profileInfo.icon} {profileInfo.label}
+                        <Badge variant="secondary" className="gap-1 text-xs">
+                          <profileInfo.icon className="h-3 w-3" /> {profileInfo.label}
                         </Badge>
                       </div>
                     </div>

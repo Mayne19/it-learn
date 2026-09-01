@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Badge } from "@/components/ui/badge"
-import { Sparkles, RotateCcw, Zap } from "lucide-react"
+import { Sparkles, RotateCcw, Zap, Dumbbell, ThumbsUp, Star } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getSupabaseClient } from "@/lib/supabase"
 import { getApiErrorMessage } from "@/lib/api-errors"
@@ -18,11 +18,11 @@ interface Props {
   chapter: StudyChapter
 }
 
-const GRADE_CONFIG: { grade: FlashcardGrade; label: string; emoji: string; tone: string }[] = [
-  { grade: "again", label: "À revoir", emoji: "🔄", tone: "border-destructive/30 text-destructive hover:bg-destructive/10" },
-  { grade: "hard", label: "Difficile", emoji: "💪", tone: "border-warning/30 text-warning hover:bg-warning/10" },
-  { grade: "good", label: "Bien", emoji: "👍", tone: "border-ring/30 text-ring hover:bg-ring/10" },
-  { grade: "easy", label: "Facile", emoji: "✨", tone: "border-success/30 text-success hover:bg-success/10" },
+const GRADE_CONFIG: { grade: FlashcardGrade; label: string; icon: typeof RotateCcw; tone: string }[] = [
+  { grade: "again", label: "À revoir", icon: RotateCcw, tone: "border-destructive/30 text-destructive hover:bg-destructive/10" },
+  { grade: "hard", label: "Difficile", icon: Dumbbell, tone: "border-warning/30 text-warning hover:bg-warning/10" },
+  { grade: "good", label: "Bien", icon: ThumbsUp, tone: "border-ring/30 text-ring hover:bg-ring/10" },
+  { grade: "easy", label: "Facile", icon: Star, tone: "border-success/30 text-success hover:bg-success/10" },
 ]
 
 export function FlashcardReview({ chapter }: Props) {
@@ -199,9 +199,9 @@ export function FlashcardReview({ chapter }: Props) {
       {/* Grade buttons */}
       {flipped && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {GRADE_CONFIG.map(({ grade, label, emoji, tone }) => (
+          {GRADE_CONFIG.map(({ grade, label, icon: Icon, tone }) => (
             <Button key={grade} variant="outline" className={cn("gap-1.5", tone)} onClick={() => handleGrade(grade)}>
-              <span>{emoji}</span> {label}
+              <Icon className="h-3.5 w-3.5" /> {label}
             </Button>
           ))}
         </div>
