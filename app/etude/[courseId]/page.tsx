@@ -8,19 +8,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertAction } from "@/components/ui/alert"
 import { Spinner } from "@/components/ui/spinner"
-import { ArrowLeft, ArrowRight, FileText, Sparkles, AlertCircle, CheckCircle2, BookOpen, Code2, BookMarked, Zap } from "lucide-react"
+import { ArrowLeft, ArrowRight, FileText, Sparkles, AlertCircle, CheckCircle2, BookOpen } from "lucide-react"
 import { getApiErrorMessage } from "@/lib/api-errors"
 import { getStudyCourse, listFiles, updateStudyCourseFileStatus, saveIngestResult, countStudyChapters } from "@/lib/study/queries"
 import { listStudyChapters } from "@/lib/study/lesson-queries"
+import { PROFILE_UI } from "@/lib/study/profile-ui"
 import type { IngestResult } from "@/lib/study/ingest-prompt"
 import type { IngestPlan } from "@/app/api/study/ingest/plan/route"
 import type { StudyCourse, StudyCourseFile, StudyChapter } from "@/lib/study/types"
-
-const PROFILE_ICON: Record<string, typeof Code2> = {
-  programming: Code2,
-  theory: BookMarked,
-  mixed: Zap,
-}
 
 // Une ingestion normale (même multi-tranches sur un gros PDF) se termine en
 // quelques minutes. Au-delà, un fichier resté en "processing" est presque
@@ -181,7 +176,7 @@ export default function EtudeCoursePage() {
       <div className="flex items-center gap-3">
         <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-ring/10 text-ring">
           {(() => {
-            const Icon = PROFILE_ICON[course.profile] ?? Zap
+            const Icon = PROFILE_UI[course.profile].icon
             return <Icon className="h-5 w-5" />
           })()}
         </div>

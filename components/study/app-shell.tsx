@@ -15,14 +15,9 @@ import {
 import { cn } from "@/lib/utils"
 import { getSupabaseClient } from "@/lib/supabase"
 import { listStudyCourses } from "@/lib/study/queries"
+import { PROFILE_UI } from "@/lib/study/profile-ui"
 import type { StudyCourse } from "@/lib/study/types"
 import type { User } from "@supabase/supabase-js"
-
-const PROFILE_DOT: Record<string, string> = {
-  programming: "bg-ring",
-  theory: "bg-success",
-  mixed: "bg-warning",
-}
 
 function initialsFromEmail(email: string | null | undefined): string {
   if (!email) return "?"
@@ -120,7 +115,7 @@ export function AppShell({ children }: Props) {
           href={`/etude/${course.id}`}
           className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
-          <span className={cn("h-1.5 w-1.5 flex-shrink-0 rounded-full", PROFILE_DOT[course.profile] ?? "bg-muted-foreground")} />
+          <span className={cn("h-1.5 w-1.5 flex-shrink-0 rounded-full", PROFILE_UI[course.profile]?.dotColor ?? "bg-muted-foreground")} />
           <span className="min-w-0 flex-1 truncate">{course.title}</span>
         </Link>
       ))}

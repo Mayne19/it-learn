@@ -13,19 +13,13 @@ import { Spinner } from "@/components/ui/spinner"
 import {
   ArrowLeft, Plus, FileText, Trash2, AlertCircle,
   CheckCircle2, BookOpen, FileUp, ArrowRight,
-  Code2, BookMarked, Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getSupabaseClient } from "@/lib/supabase"
 import { getApiErrorMessage } from "@/lib/api-errors"
 import { listCourses, createCourse, deleteCourse, listFiles, uploadFile, deleteFile } from "@/lib/study/queries"
+import { PROFILE_UI } from "@/lib/study/profile-ui"
 import type { CourseProfile, StudyCourse, StudyCourseFile } from "@/lib/study/types"
-
-const PROFILE_LABELS: Record<CourseProfile, { label: string; desc: string; icon: typeof Code2 }> = {
-  programming: { label: "Programmation", desc: "Exercices de code, Bug Hunt, analyse", icon: Code2 },
-  theory:      { label: "Théorie", desc: "QCM, appariements, vrai/faux", icon: BookMarked },
-  mixed:       { label: "Mixte", desc: "Combinaison équilibrée", icon: Zap },
-}
 
 export default function EtudeDashboardManager() {
   const [userId, setUserId] = useState<string | null>(null)
@@ -189,7 +183,7 @@ export default function EtudeDashboardManager() {
           <div className="space-y-2">
             <Label>Profil</Label>
             <div className="grid grid-cols-3 gap-2">
-              {(Object.entries(PROFILE_LABELS) as [CourseProfile, typeof PROFILE_LABELS[CourseProfile]][]).map(([key, { label, desc, icon: Icon }]) => (
+              {(Object.entries(PROFILE_UI) as [CourseProfile, typeof PROFILE_UI[CourseProfile]][]).map(([key, { label, description, icon: Icon }]) => (
                 <button
                   key={key}
                   type="button"
@@ -203,7 +197,7 @@ export default function EtudeDashboardManager() {
                 >
                   <Icon className="h-5 w-5" />
                   <p className="text-sm font-medium mt-1">{label}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
                 </button>
               ))}
             </div>
@@ -236,7 +230,7 @@ export default function EtudeDashboardManager() {
         <div className="space-y-2">
           {courses.map(course => {
             const isSelected = selectedCourse?.id === course.id
-            const profileInfo = PROFILE_LABELS[course.profile]
+            const profileInfo = PROFILE_UI[course.profile]
             return (
               <div key={course.id}>
                 <Card
