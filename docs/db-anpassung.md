@@ -264,6 +264,37 @@ RLS hérité automatiquement de `study_chapters` — pas de policy à ajouter su
 
 **Code à mettre à jour plus tard** (pas fait ici) : `lib/study/lesson-queries.ts` → lire `study_chapters_with_progress` au lieu de `study_chapters` dans `listAllStudyChaptersForUser`.
 
+## 4bis. Corrections Security Advisor
+
+Deux points remontés par l'onglet **Advisors → Security Advisor** de Supabase après application des sections 3 et 4, à corriger avant de considérer la migration terminée.
+
+| Type | Entité | Problème | Correctif |
+|---|---|---|---|
+| Error | `study_chapters_fill_derived` (trigger) | `search_path` non figé — la fonction peut résoudre `public.study_courses` vers un mauvais schéma si le `search_path` de la session est manipulé | `set search_path = public` sur la fonction |
+| Warning | `study_chapters_with_progress` (vue) | Vue en mode `SECURITY DEFINER` implicite — s'exécute avec les droits du créateur, pas du visiteur | Forcer `security_invoker = true` pour que la vue applique le RLS du visiteur |
+
+```sql
+-- Fige le search_path du trigger (corrige "Function Search Path Mutable")
+alter function public.study_chapters_fill_derived() set search_path = public;
+
+-- Force la vue à s'exécuter avec les droits du visiteur, pas du créateur
+-- (corrige "Security Definer View") — sans risque ici puisque les tables
+-- sous-jacentes sont déjà filtrées par RLS sur user_id, mais on l'explicite.
+alter view public.study_chapters_with_progress set (security_invoker = true);
+```
+
+Vérification :
+
+```sql
+-- doit retourner 'public' pour proconfig contenant search_path=public
+select proconfig from pg_proc where proname = 'study_chapters_fill_derived';
+
+-- doit retourner true
+select reloptions from pg_class where relname = 'study_chapters_with_progress';
+```
+
+Le 3ème point du Security Advisor (**Leaked Password Protection Disabled**) ne concerne pas ce schéma — c'est un réglage global d'Auth. Optionnel : **Authentication → Providers → Email** → activer "Leaked password protection" (vérifie les mots de passe contre des fuites connues via HaveIBeenPwned au moment de l'inscription).
+
 ## 5. Bucket Storage
 
 Chemin attendu : `{user_id}/{study_course_id}/{filename}` — upload direct client → Storage (pas de route API, limite de payload trop basse pour des PDF complets).
