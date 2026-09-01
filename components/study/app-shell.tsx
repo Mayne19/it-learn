@@ -162,9 +162,8 @@ export function AppShell({ children }: Props) {
           <p className="truncate text-[13px] font-semibold leading-tight">
             {user?.email?.split("@")[0] ?? "…"}
           </p>
-          <p className="flex items-center gap-1 text-[11px] text-success">
-            <span className="h-1.5 w-1.5 rounded-full bg-success" />
-            En ligne
+          <p className="truncate text-[11px] text-muted-foreground">
+            {user?.email ?? ""}
           </p>
         </div>
         <ChevronUp className={cn("h-3.5 w-3.5 flex-shrink-0 text-muted-foreground transition-transform", profileMenuOpen && "rotate-180")} />
