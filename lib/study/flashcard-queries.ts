@@ -21,14 +21,21 @@ export async function getCachedFlashcards(studyChapterId: string): Promise<Flash
 }
 
 export async function saveFlashcards(studyChapterId: string, cards: GeneratedFlashcard[]): Promise<Flashcard[]> {
+  const client = getSupabaseClient()
+  const { data: userData, error: userError } = await client.auth.getUser()
+  if (userError || !userData.user) {
+    throw new Error("Utilisateur non authentifié")
+  }
+
   const rows = cards.map(c => ({
     study_chapter_id: studyChapterId,
+    user_id: userData.user.id,
     front_de: c.front_de,
     back_de: c.back_de,
     back_fr: c.back_fr,
   }))
 
-  const { data, error } = await getSupabaseClient()
+  const { data, error } = await client
     .from("study_flashcards")
     .insert(rows)
     .select()
