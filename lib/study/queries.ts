@@ -100,7 +100,14 @@ export async function updateStudyCourseFileStatus(
 ): Promise<void> {
   const { error } = await getSupabaseClient()
     .from("study_course_files")
-    .update({ status, error_message: errorMessage ?? null })
+    .update({
+      status,
+      error_message: errorMessage ?? null,
+      // Sert à détecter côté UI un fichier resté bloqué en "processing"
+      // (onglet fermé pendant l'ingestion, par ex.) — voir
+      // PROCESSING_STUCK_AFTER_MS dans app/etude/[courseId]/page.tsx.
+      processed_at: new Date().toISOString(),
+    })
     .eq("id", fileId)
 
   if (error) {
@@ -199,6 +206,24 @@ export async function saveIngestResult(
     throw new Error("Utilisateur non authentifié")
   }
 
+  // sourceFileId et studyCourseId viennent tous les deux du client — rien
+  // côté API d'ingestion ne les recoupe (elle ne connaît que fileId, pas le
+  // cours auquel le résultat sera rattaché). Sans ce contrôle, un mauvais
+  // couple (fileId, courseId) attacherait silencieusement des chapitres au
+  // mauvais cours de l'utilisateur.
+  const { data: fileRow, error: fileCheckError } = await client
+    .from("study_course_files")
+    .select("study_course_id")
+    .eq("id", sourceFileId)
+    .maybeSingle()
+
+  if (fileCheckError || !fileRow) {
+    throw new Error("Fichier source introuvable ou accès refusé")
+  }
+  if (fileRow.study_course_id !== studyCourseId) {
+    throw new Error("Ce fichier n'appartient pas au cours indiqué")
+  }
+
   const { error: profileError } = await client
     .from("study_courses")
     .update({ profile: ingestResult.profile as CourseProfile, detected_lang: ingestResult.detected_language })
@@ -217,12 +242,16 @@ export async function saveIngestResult(
     concepts: chapter.concepts,
     summary: chapter.summary,
     has_code: chapter.has_code,
+    code_lang: chapter.code_lang,
     source_file_id: sourceFileId,
   }))
 
   const { error: chaptersError } = await client.from("study_chapters").insert(rows)
 
   if (chaptersError) {
-    throw new Error(`Impossible d'enregistrer les chapitres: ${chaptersError.message}`)
+    // Le code Postgres (ex. 23505 = clé dupliquée sur l'ordre des chapitres,
+    // deux onglets qui génèrent en parallèle) est préservé dans le message
+    // pour que getApiErrorMessage puisse le traduire en texte lisible.
+    throw new Error(`Impossible d'enregistrer les chapitres [${chaptersError.code ?? "?"}]: ${chaptersError.message}`)
   }
 }

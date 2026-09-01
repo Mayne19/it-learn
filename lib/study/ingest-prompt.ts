@@ -11,6 +11,7 @@ export interface IngestResult {
     concepts: string[]
     summary: string
     has_code: boolean
+    code_lang: Lang | null
   }[]
 }
 
@@ -33,6 +34,7 @@ Pour chaque chapitre, identifie :
 - la liste des concepts clés abordés (mots ou courtes expressions)
 - un résumé de 2-4 phrases qui mentionne explicitement chacun des concepts listés
 - si le chapitre contient du code ou des exemples de syntaxe technique (has_code)
+- si oui, dans quel langage (code_lang) parmi : "java", "python", "perl", "javascript" — null si has_code est false ou si le langage n'en fait pas partie
 
 Détecte aussi le profil global du cours :
 - "programming" : cours de programmation (un langage précis domine)
@@ -59,7 +61,8 @@ Réponds UNIQUEMENT avec du JSON valide, sans markdown, sans backticks :
       "title_fr": "Titre en français",
       "concepts": ["concept1", "concept2"],
       "summary": "Résumé mentionnant concept1 et concept2 explicitement.",
-      "has_code": true
+      "has_code": true,
+      "code_lang": "java"
     }
   ]
 }`

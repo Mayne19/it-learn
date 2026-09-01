@@ -137,6 +137,28 @@ export async function POST(req: Request) {
     )
   }
 
+  // Un JSON syntaxiquement valide peut quand même avoir la mauvaise forme
+  // (chapters absent, champ obligatoire manquant sur un chapitre) — sans
+  // ce contrôle, l'erreur suivante serait un TypeError générique au lieu
+  // d'un message exploitable, avant même d'atteindre validateChapters.
+  if (!Array.isArray(ingestResult.chapters) || ingestResult.chapters.length === 0) {
+    console.error('[study/ingest] pas de chapitres exploitables dans la réponse', text.slice(0, 500))
+    return Response.json(
+      { error: `L'IA n'a renvoyé aucun chapitre exploitable pour "${fileRow.filename}"${startPage ? ` (pages ${startPage}-${endPage})` : ''}. Réessaie, ou signale ce cas.` },
+      { status: 500 }
+    )
+  }
+  const missingFieldIndex = ingestResult.chapters.findIndex(
+    c => !c.title_de?.trim() || !c.title_fr?.trim() || !c.summary?.trim() || !Array.isArray(c.concepts)
+  )
+  if (missingFieldIndex !== -1) {
+    console.error('[study/ingest] chapitre incomplet dans la réponse', ingestResult.chapters[missingFieldIndex])
+    return Response.json(
+      { error: `L'IA a renvoyé un chapitre incomplet (titre, résumé ou concepts manquant) pour "${fileRow.filename}". Réessaie la génération.` },
+      { status: 500 }
+    )
+  }
+
   const issues = validateChapters(
     ingestResult.chapters.map(c => ({
       order: c.order,

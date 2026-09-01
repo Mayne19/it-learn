@@ -79,8 +79,7 @@ export default function StudyChapterPage({
     )
   }
 
-  const hasCode = !!(chapter.code_snippets && chapter.code_snippets.length > 0)
-  const exerciseSlots = getExerciseSlots(chapter.profile, hasCode)
+  const exerciseSlots = getExerciseSlots(chapter.profile, chapter.has_code)
   const profileLabel = chapter.profile === "programming" ? "Programmation" : chapter.profile === "theory" ? "Théorie" : "Mixte"
   const lang: Lang = chapter.code_lang || "none"
   const positionInCourse = allChapters.findIndex(c => c.id === chapter.id) + 1

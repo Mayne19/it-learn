@@ -1,9 +1,22 @@
-type ClaudeModel = "claude-sonnet-4-6" | "claude-haiku-4-5"
+// claude-sonnet-4-6 n'est pas utilisé côté mode étude (seulement par le
+// mode Klausur, app/api/klausur|exercise|lesson) — gardé ici uniquement si
+// ce fichier est un jour partagé entre les deux modes.
+type ClaudeModel = "claude-sonnet-5" | "claude-sonnet-4-6" | "claude-haiku-4-5"
 
 interface CallClaudeOptions {
   model: ClaudeModel
   prompt: string
   maxTokens?: number
+}
+
+/** Porte le status HTTP Anthropic d'origine (ex. 429 rate-limit, 401 clé
+ * invalide) — sans ça, l'appelant ne peut renvoyer qu'un 500 générique quel
+ * que soit le vrai problème. */
+export class ClaudeApiError extends Error {
+  constructor(message: string, public status: number) {
+    super(message)
+    this.name = "ClaudeApiError"
+  }
 }
 
 export async function callClaude({ model, prompt, maxTokens = 2000 }: CallClaudeOptions): Promise<string> {
@@ -25,7 +38,7 @@ export async function callClaude({ model, prompt, maxTokens = 2000 }: CallClaude
   })
 
   const data = await res.json()
-  if (!res.ok) throw new Error(data.error?.message ?? "Erreur Anthropic")
+  if (!res.ok) throw new ClaudeApiError(data.error?.message ?? "Erreur Anthropic", res.status)
 
   const text = data.content?.[0]?.text ?? ""
   return text

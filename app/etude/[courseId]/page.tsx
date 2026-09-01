@@ -22,6 +22,20 @@ const PROFILE_ICON: Record<string, typeof Code2> = {
   mixed: Zap,
 }
 
+// Une ingestion normale (même multi-tranches sur un gros PDF) se termine en
+// quelques minutes. Au-delà, un fichier resté en "processing" est presque
+// certainement bloqué (onglet fermé/navigation pendant l'appel) plutôt
+// qu'une génération réellement en cours — voir docs/db-anpassung.md §3 pour
+// processed_at, écrit à chaque changement de statut par
+// updateStudyCourseFileStatus.
+const PROCESSING_STUCK_AFTER_MS = 10 * 60 * 1000
+
+function isStuckProcessing(file: StudyCourseFile): boolean {
+  if (file.status !== "processing") return false
+  const since = file.processed_at ?? file.uploaded_at
+  return Date.now() - new Date(since).getTime() > PROCESSING_STUCK_AFTER_MS
+}
+
 export default function EtudeCoursePage() {
   const params = useParams<{ courseId: string }>()
   const courseId = params.courseId
@@ -120,6 +134,20 @@ export default function EtudeCoursePage() {
     }
   }
 
+  async function handleReset(file: StudyCourseFile) {
+    setError("")
+    try {
+      await updateStudyCourseFileStatus(
+        file.id,
+        "error",
+        "Génération interrompue (onglet fermé ou navigation pendant le traitement) — réessaie."
+      )
+      await load()
+    } catch (e) {
+      setError(getApiErrorMessage(e instanceof Error ? e.message : String(e)))
+    }
+  }
+
   if (loading) {
     return (
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
@@ -142,7 +170,7 @@ export default function EtudeCoursePage() {
     )
   }
 
-  const pendingFiles = files.filter(f => f.status === "pending" || f.status === "error")
+  const pendingFiles = files.filter(f => f.status === "pending" || f.status === "error" || isStuckProcessing(f))
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
@@ -179,38 +207,57 @@ export default function EtudeCoursePage() {
           <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
             Fichiers à traiter
           </p>
-          {pendingFiles.map(f => (
-            <Card key={f.id} className="border border-border/70 bg-card shadow-none">
-              <CardContent className="flex items-center gap-3 p-4">
-                <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{f.file_name}</p>
-                  {f.status === "error" && f.error_message && (
-                    <p className="truncate text-xs text-destructive">{f.error_message}</p>
-                  )}
-                </div>
-                <Button
-                  size="sm"
-                  className="gap-2 flex-shrink-0"
-                  disabled={processingFileId === f.id}
-                  onClick={() => handleGenerate(f)}
-                >
-                  {processingFileId === f.id ? (
-                    <>
-                      <Spinner className="h-3.5 w-3.5" />
-                      {progress && progress.total > 1
-                        ? `Tranche ${progress.current}/${progress.total}...`
-                        : "Génération..."}
-                    </>
+          {pendingFiles.map(f => {
+            const stuck = isStuckProcessing(f) && processingFileId !== f.id
+            return (
+              <Card key={f.id} className="border border-border/70 bg-card shadow-none">
+                <CardContent className="flex items-center gap-3 p-4">
+                  <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{f.file_name}</p>
+                    {f.status === "error" && f.error_message && (
+                      <p className="truncate text-xs text-destructive">{f.error_message}</p>
+                    )}
+                    {stuck && (
+                      <p className="truncate text-xs text-warning">
+                        Génération interrompue — la page a dû être fermée pendant le traitement.
+                      </p>
+                    )}
+                  </div>
+                  {stuck ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-2 flex-shrink-0"
+                      onClick={() => handleReset(f)}
+                    >
+                      Réinitialiser
+                    </Button>
                   ) : (
-                    <>
-                      <Sparkles className="h-3.5 w-3.5" /> {f.status === "error" ? "Réessayer" : "Générer les chapitres"}
-                    </>
+                    <Button
+                      size="sm"
+                      className="gap-2 flex-shrink-0"
+                      disabled={processingFileId === f.id}
+                      onClick={() => handleGenerate(f)}
+                    >
+                      {processingFileId === f.id ? (
+                        <>
+                          <Spinner className="h-3.5 w-3.5" />
+                          {progress && progress.total > 1
+                            ? `Tranche ${progress.current}/${progress.total}...`
+                            : "Génération..."}
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-3.5 w-3.5" /> {f.status === "error" ? "Réessayer" : "Générer les chapitres"}
+                        </>
+                      )}
+                    </Button>
                   )}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            )
+          })}
         </section>
       )}
 
