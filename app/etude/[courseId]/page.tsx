@@ -13,6 +13,7 @@ import { getApiErrorMessage } from "@/lib/api-errors"
 import { getStudyCourse, listFiles, updateStudyCourseFileStatus, saveIngestResult, countStudyChapters } from "@/lib/study/queries"
 import { listStudyChapters } from "@/lib/study/lesson-queries"
 import type { IngestResult } from "@/lib/study/ingest-prompt"
+import type { IngestPlan } from "@/app/api/study/ingest/plan/route"
 import type { StudyCourse, StudyCourseFile, StudyChapter } from "@/lib/study/types"
 
 const PROFILE_ICON: Record<string, string> = {
@@ -30,6 +31,7 @@ export default function EtudeCoursePage() {
   const [chapters, setChapters] = useState<StudyChapter[]>([])
   const [loading, setLoading] = useState(true)
   const [processingFileId, setProcessingFileId] = useState<string | null>(null)
+  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null)
   const [error, setError] = useState("")
 
   const load = useCallback(async () => {
@@ -59,24 +61,53 @@ export default function EtudeCoursePage() {
     try {
       await updateStudyCourseFileStatus(file.id, "processing")
 
-      // Le PDF ne transite jamais par le navigateur ici — la route API le
-      // télécharge elle-même depuis Storage (voir app/api/study/ingest),
-      // pour rester sous la limite de payload des fonctions Vercel.
-      const res = await fetch("/api/study/ingest", {
+      // Un PDF de quelques dizaines de pages part en un seul appel — un
+      // support de semestre complet (200+ pages) dépasse ce qu'une seule
+      // réponse Sonnet peut produire (JSON tronqué avant la fin). /plan
+      // détecte ce cas et découpe en tranches qui respectent les
+      // frontières de chapitres (jamais un chapitre coupé en deux) ;
+      // chaque tranche est ensuite ingérée séparément ci-dessous, en PDF
+      // natif comme avant — voir lib/study/pdf-split.ts.
+      const planRes = await fetch("/api/study/ingest/plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fileId: file.id }),
       })
-      const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error ?? "Erreur lors de la génération des chapitres")
+      const planData = await planRes.json()
+      if (!planRes.ok) {
+        throw new Error(planData.error ?? "Erreur lors de la planification de l'ingestion")
+      }
+      const plan = planData as IngestPlan
+
+      for (let i = 0; i < plan.slices.length; i++) {
+        const slice = plan.slices[i]
+        setProgress({ current: i + 1, total: plan.slices.length })
+
+        const res = await fetch("/api/study/ingest", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            plan.slices.length > 1
+              ? { fileId: file.id, startPage: slice.startPage, endPage: slice.endPage }
+              : { fileId: file.id }
+          ),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          throw new Error(data.error ?? "Erreur lors de la génération des chapitres")
+        }
+
+        const ingestResult = data as IngestResult
+        const existingCount = await countStudyChapters(courseId)
+        await saveIngestResult(courseId, file.id, ingestResult, existingCount)
+
+        // Chaque tranche traitée est déjà sauvegardée en base — si une
+        // tranche suivante échoue, les chapitres déjà générés restent
+        // acquis plutôt que d'être perdus.
+        await load()
       }
 
-      const ingestResult = data as IngestResult
-      const existingCount = await countStudyChapters(courseId)
-      await saveIngestResult(courseId, file.id, ingestResult, existingCount)
       await updateStudyCourseFileStatus(file.id, "done")
-
       await load()
     } catch (e) {
       const message = getApiErrorMessage(e instanceof Error ? e.message : String(e))
@@ -85,6 +116,7 @@ export default function EtudeCoursePage() {
       await load()
     } finally {
       setProcessingFileId(null)
+      setProgress(null)
     }
   }
 
@@ -162,7 +194,10 @@ export default function EtudeCoursePage() {
                 >
                   {processingFileId === f.id ? (
                     <>
-                      <Spinner className="h-3.5 w-3.5" /> Génération...
+                      <Spinner className="h-3.5 w-3.5" />
+                      {progress && progress.total > 1
+                        ? `Tranche ${progress.current}/${progress.total}...`
+                        : "Génération..."}
                     </>
                   ) : (
                     <>

@@ -2,10 +2,12 @@ import { buildIngestPrompt, type IngestResult } from '@/lib/study/ingest-prompt'
 import { validateChapters } from '@/lib/study/validate-chapters'
 import { getApiErrorMessage } from '@/lib/api-errors'
 import { getSupabaseServerClient } from '@/lib/supabase-server'
+import { extractPdfPageRange } from '@/lib/study/pdf-split'
 
 // Limite dure de l'API Anthropic pour les PDF en pièce jointe (contexte 1M) —
 // voir docs/etude-mode-plan.md §5.3 étape 1. Un fichier plus gros doit être
-// découpé en tranches par l'appelant avant d'arriver ici.
+// découpé en tranches par l'appelant (voir /api/study/ingest/plan) avant
+// d'arriver ici.
 const MAX_PDF_BASE64_BYTES = 32 * 1024 * 1024
 
 const BUCKET = 'study-course-files'
@@ -18,7 +20,7 @@ export async function POST(req: Request) {
     )
   }
 
-  const { fileId } = await req.json()
+  const { fileId, startPage, endPage } = await req.json()
   if (!fileId || typeof fileId !== 'string') {
     return Response.json({ error: 'fileId manquant' }, { status: 400 })
   }
@@ -52,7 +54,16 @@ export async function POST(req: Request) {
     )
   }
 
-  const buffer = Buffer.from(await blob.arrayBuffer())
+  let buffer = Buffer.from(await blob.arrayBuffer())
+
+  // Un fichier trop volumineux pour un seul appel a été planifié en
+  // tranches par /api/study/ingest/plan — celle-ci ne traite que la plage
+  // de pages demandée, jamais le PDF entier.
+  if (typeof startPage === 'number' && typeof endPage === 'number') {
+    const sliceBytes = await extractPdfPageRange(new Uint8Array(buffer), startPage, endPage)
+    buffer = Buffer.from(sliceBytes)
+  }
+
   const pdfBase64 = buffer.toString('base64')
 
   if (pdfBase64.length > MAX_PDF_BASE64_BYTES) {
@@ -97,9 +108,9 @@ export async function POST(req: Request) {
   }
 
   if (data.stop_reason === 'max_tokens') {
-    console.error('[study/ingest] réponse tronquée (max_tokens)', { filename: fileRow.filename })
+    console.error('[study/ingest] réponse tronquée (max_tokens)', { filename: fileRow.filename, startPage, endPage })
     return Response.json(
-      { error: `La réponse de l'IA a été tronquée avant la fin (document trop volumineux pour "${fileRow.filename}"). Découpe-le en fichiers plus petits.` },
+      { error: `La réponse de l'IA a été tronquée avant la fin pour "${fileRow.filename}"${startPage ? ` (pages ${startPage}-${endPage})` : ''}. Le découpage en tranches n'a pas suffi — réessaie, ou signale ce cas.` },
       { status: 500 }
     )
   }
