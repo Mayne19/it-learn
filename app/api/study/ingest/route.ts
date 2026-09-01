@@ -73,7 +73,7 @@ export async function POST(req: Request) {
     },
     body: JSON.stringify({
       model: 'claude-sonnet-5',
-      max_tokens: 8000,
+      max_tokens: 16000,
       messages: [{
         role: 'user',
         content: [
@@ -89,9 +89,18 @@ export async function POST(req: Request) {
 
   const data = await res.json()
   if (!res.ok) {
+    console.error('[study/ingest] Anthropic error', res.status, data)
     return Response.json(
       { error: data.error?.message ?? 'Erreur Anthropic' },
       { status: res.status }
+    )
+  }
+
+  if (data.stop_reason === 'max_tokens') {
+    console.error('[study/ingest] réponse tronquée (max_tokens)', { filename: fileRow.filename })
+    return Response.json(
+      { error: `La réponse de l'IA a été tronquée avant la fin (document trop volumineux pour "${fileRow.filename}"). Découpe-le en fichiers plus petits.` },
+      { status: 500 }
     )
   }
 
@@ -99,14 +108,22 @@ export async function POST(req: Request) {
   const start = text.indexOf('{')
   const end = text.lastIndexOf('}')
   if (start === -1 || end === -1) {
-    return Response.json({ error: 'Réponse invalide' }, { status: 500 })
+    console.error('[study/ingest] pas de JSON exploitable dans la réponse', text.slice(0, 500))
+    return Response.json(
+      { error: `Réponse de l'IA inexploitable : "${text.slice(0, 200) || '(vide)'}"` },
+      { status: 500 }
+    )
   }
 
   let ingestResult: IngestResult
   try {
     ingestResult = JSON.parse(text.slice(start, end + 1))
-  } catch {
-    return Response.json({ error: 'JSON invalide' }, { status: 500 })
+  } catch (e) {
+    console.error('[study/ingest] JSON invalide', e, text.slice(0, 500))
+    return Response.json(
+      { error: `JSON invalide reçu de l'IA : ${e instanceof Error ? e.message : String(e)}` },
+      { status: 500 }
+    )
   }
 
   const issues = validateChapters(
