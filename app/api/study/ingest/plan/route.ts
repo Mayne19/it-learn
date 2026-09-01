@@ -74,10 +74,16 @@ export async function POST(req: Request) {
   try {
     const pageTexts = await extractPageTexts(pdfBytes)
     const prompt = buildChapterBoundariesPrompt(pageTexts)
-    const text = await callClaude({ model: 'claude-haiku-4-5', prompt, maxTokens: 2000 })
-    const { chapter_start_pages: chapterStartPages } = extractJSON(text) as { chapter_start_pages: number[] }
+    const text = await callClaude({ model: 'claude-haiku-4-5', prompt, maxTokens: 4000 })
+    const { chapter_start_pages: chapterStartPages, subchapter_start_pages: subchapterStartPages } =
+      extractJSON(text) as { chapter_start_pages: number[]; subchapter_start_pages?: number[] }
 
-    const slices = groupChapterStartsIntoSlices(chapterStartPages, totalPages, SPLIT_THRESHOLD_PAGES)
+    // Un chapitre isolé dépasse fréquemment le seuil à lui seul sur un
+    // support de semestre complet (cas observé : 128 pages) — les
+    // frontières de sous-chapitres donnent des points de coupure plus fins
+    // pour rester sous le seuil sans jamais couper une unité en deux.
+    const allBoundaries = [...chapterStartPages, ...(subchapterStartPages ?? [])]
+    const slices = groupChapterStartsIntoSlices(allBoundaries, totalPages, SPLIT_THRESHOLD_PAGES)
     const plan: IngestPlan = { totalPages, slices }
     return Response.json(plan)
   } catch (e) {
