@@ -217,6 +217,7 @@ export async function saveIngestResult(
     concepts: chapter.concepts,
     summary: chapter.summary,
     has_code: chapter.has_code,
+    code_lang: chapter.code_lang,
     source_file_id: sourceFileId,
   }))
 
