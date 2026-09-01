@@ -224,6 +224,9 @@ export async function saveIngestResult(
   const { error: chaptersError } = await client.from("study_chapters").insert(rows)
 
   if (chaptersError) {
-    throw new Error(`Impossible d'enregistrer les chapitres: ${chaptersError.message}`)
+    // Le code Postgres (ex. 23505 = clé dupliquée sur l'ordre des chapitres,
+    // deux onglets qui génèrent en parallèle) est préservé dans le message
+    // pour que getApiErrorMessage puisse le traduire en texte lisible.
+    throw new Error(`Impossible d'enregistrer les chapitres [${chaptersError.code ?? "?"}]: ${chaptersError.message}`)
   }
 }
