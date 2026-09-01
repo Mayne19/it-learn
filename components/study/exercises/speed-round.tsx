@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Badge } from "@/components/ui/badge"
 import { CodeBlock } from "@/components/code-block"
-import { Zap, Flame, RefreshCw, Trophy, Clock, CheckCircle, XCircle } from "lucide-react"
+import { Zap, Flame, RefreshCw, Trophy, CheckCircle, XCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getApiErrorMessage } from "@/lib/api-errors"
+import { recordExerciseAttempt } from "@/lib/study/exercise-history-queries"
 import type { CourseProfile, StudyChapter } from "@/lib/study/types"
 import type { SpeedRoundQuestion } from "@/lib/study/speed-round-prompt"
 import type { Lang } from "@/lib/chapters/types"
@@ -103,7 +104,10 @@ export function SpeedRound({ chapter, profile, lang }: Props) {
     } else {
       setStreak(0)
     }
-  }, [current, selected])
+    // Best-effort, ne bloque jamais la réponse affichée à l'utilisateur —
+    // alimente pickNextExercise (lib/study/next-up.ts).
+    recordExerciseAttempt(chapter.id, "speedRound", correct)
+  }, [current, selected, chapter.id])
 
   useEffect(() => {
     if (!current || selected !== null || finished) return

@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Flame, ArrowRight, Zap, Star, CheckCircle, Clock, AlertCircle, BookOpen } from "lucide-react"
+import { Flame, ArrowRight, Zap, Star, CheckCircle, Clock, AlertCircle, BookOpen, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getSupabaseClient } from "@/lib/supabase"
 import {
@@ -13,6 +13,22 @@ import {
   type StudyChapterWithCourse,
 } from "@/lib/study/lesson-queries"
 import { listStudyCourses } from "@/lib/study/queries"
+import { getExerciseSlots } from "@/lib/study/exercise-strategy"
+import { getExerciseHistory } from "@/lib/study/exercise-history-queries"
+import { pickNextExercise } from "@/lib/study/next-up"
+import type { StudyExerciseType } from "@/lib/study/types"
+
+const EXERCISE_LABELS: Record<StudyExerciseType, string> = {
+  mcq: "un QCM",
+  matching: "un appariement",
+  trueFalse: "un vrai/faux",
+  fillBlank: "un texte à trous",
+  codeAnalysis: "une analyse de code",
+  code: "un exercice de code",
+  speedRound: "un Speed Round",
+  bugHunt: "un Bug Hunt",
+  conceptMap: "une carte de concepts",
+}
 
 interface CourseSummary {
   courseId: string
@@ -68,6 +84,38 @@ export default function EtudeDashboardPage() {
     () => chapters.filter(c => c.mastery_pct > 0 && c.mastery_pct < 100),
     [chapters],
   )
+
+  // Chapitre le plus prioritaire (même ordre que les sections ci-dessous :
+  // à réviser d'abord, sinon en cours, sinon jamais exploré) — un seul
+  // chapitre plutôt que d'interroger l'historique de tous, pour rester
+  // léger sur cette page qui se recharge à chaque visite.
+  const priorityChapter = dueChapters[0] ?? inProgress[0] ?? neverExplored[0] ?? null
+
+  // chapterId associé au résultat, pour ignorer une recommandation
+  // devenue obsolète si priorityChapter change avant la fin du fetch.
+  const [nextExercise, setNextExercise] = useState<{ chapterId: string; type: StudyExerciseType } | null>(null)
+
+  useEffect(() => {
+    if (!priorityChapter) return
+    let cancelled = false
+    getExerciseHistory(priorityChapter.id)
+      .then(history => {
+        if (cancelled) return
+        const slots = getExerciseSlots(priorityChapter.profile, priorityChapter.has_code)
+        const candidates = slots.map(s => ({ studyChapterId: priorityChapter.id, exerciseType: s.type }))
+        const mix = slots.map(s => ({ exerciseType: s.type, weight: s.weight }))
+        const pick = pickNextExercise(candidates, mix, history)
+        if (pick) setNextExercise({ chapterId: priorityChapter.id, type: pick.exerciseType as StudyExerciseType })
+      })
+      .catch(() => {
+        // Recommandation best-effort — la page reste utilisable sans elle,
+        // les sections À réviser/En cours/Pas exploré ci-dessous suffisent.
+      })
+    return () => { cancelled = true }
+  }, [priorityChapter])
+
+  const nextExerciseType =
+    priorityChapter && nextExercise?.chapterId === priorityChapter.id ? nextExercise.type : null
 
   const courseSummaries = useMemo(() => {
     const map = new Map<string, CourseSummary>()
@@ -171,6 +219,31 @@ export default function EtudeDashboardPage() {
           </Button>
         </Link>
       </div>
+
+      {/* Prochain exercice recommandé — pondéré par pickNextExercise selon
+          le dosage du profil et le taux de réussite réel déjà observé sur
+          ce chapitre (lib/study/next-up.ts). Pointe vers le chapitre plutôt
+          qu'un type d'exercice précis : seul le Speed Round a une UI
+          dédiée aujourd'hui, les autres types n'ont qu'un badge sur la
+          page chapitre. */}
+      {priorityChapter && nextExerciseType && (
+        <Link href={`/etude/${priorityChapter.study_course_id}/kapitel/${priorityChapter.id}`}>
+          <Card className="border border-ring/25 bg-ring/5 shadow-none transition-colors hover:border-ring/45 hover:bg-ring/10 cursor-pointer">
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-ring/15 text-ring">
+                <Sparkles className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">
+                  Recommandé : {EXERCISE_LABELS[nextExerciseType]} sur <span className="truncate">{priorityChapter.title}</span>
+                </p>
+                <p className="text-xs text-muted-foreground truncate">{priorityChapter.course_title}</p>
+              </div>
+              <ArrowRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </Link>
+      )}
 
       {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

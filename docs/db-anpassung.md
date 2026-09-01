@@ -52,6 +52,7 @@ Vérifier 1/2 : `select column_name from information_schema.columns where table_
 | `study_lessons_cache` | Cours détaillé généré, en cache | via jointure `study_chapters` |
 | `study_flashcards` | Cartes de révision par chapitre | `user_id` direct |
 | `study_flashcards_progress` | Progression SM-2 par carte | `user_id` direct |
+| `study_exercise_history` | Historique des réponses au Speed Round, alimente pickNextExercise | `user_id` direct |
 
 Colonnes ajoutées vs. version initiale, et pourquoi :
 
@@ -226,6 +227,29 @@ alter table public.study_flashcards_progress enable row level security;
 drop policy if exists "study_flashcards_progress_user_own" on public.study_flashcards_progress;
 create policy "study_flashcards_progress_user_own"
   on public.study_flashcards_progress for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- Un enregistrement par réponse au Speed Round — alimente
+-- lib/study/next-up.ts (pickNextExercise), qui pondère le prochain
+-- exercice suggéré par chapitre selon le taux de réussite réel observé.
+-- Append-only côté application (jamais de update), pas de contrainte
+-- d'unicité : plusieurs tentatives sur le même (chapitre, type) sont
+-- attendues et voulues.
+create table if not exists public.study_exercise_history (
+  id                uuid primary key default gen_random_uuid(),
+  study_chapter_id  uuid not null references public.study_chapters(id) on delete cascade,
+  user_id           uuid not null references auth.users(id) on delete cascade,
+  exercise_type     text not null,
+  correct           boolean not null,
+  answered_at       timestamptz not null default now()
+);
+
+alter table public.study_exercise_history enable row level security;
+
+drop policy if exists "study_exercise_history_user_own" on public.study_exercise_history;
+create policy "study_exercise_history_user_own"
+  on public.study_exercise_history for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 ```
