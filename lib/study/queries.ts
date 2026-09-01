@@ -100,7 +100,14 @@ export async function updateStudyCourseFileStatus(
 ): Promise<void> {
   const { error } = await getSupabaseClient()
     .from("study_course_files")
-    .update({ status, error_message: errorMessage ?? null })
+    .update({
+      status,
+      error_message: errorMessage ?? null,
+      // Sert à détecter côté UI un fichier resté bloqué en "processing"
+      // (onglet fermé pendant l'ingestion, par ex.) — voir
+      // PROCESSING_STUCK_AFTER_MS dans app/etude/[courseId]/page.tsx.
+      processed_at: new Date().toISOString(),
+    })
     .eq("id", fileId)
 
   if (error) {
