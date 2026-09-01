@@ -10,6 +10,7 @@ import {
   Settings,
   LogOut,
   ChevronUp,
+  GraduationCap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getSupabaseClient } from "@/lib/supabase"
@@ -205,8 +206,8 @@ export function AppShell({ children }: Props) {
         )}
       >
         <div className="flex items-center gap-2.5 px-3.5 py-4">
-          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-ring text-sm font-bold text-white">
-            É
+          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-ring text-white">
+            <GraduationCap className="h-4 w-4" />
           </div>
           <div>
             <p className="text-sm font-bold leading-tight">Étude</p>
