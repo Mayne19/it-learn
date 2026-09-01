@@ -77,11 +77,12 @@ export async function deleteCourse(studyCourseId: string): Promise<void> {
 export async function createStudyCourseFile(
   studyCourseId: string,
   filename: string,
-  storagePath: string
+  storagePath: string,
+  userId: string
 ): Promise<StudyCourseFile> {
   const { data, error } = await getSupabaseClient()
     .from("study_course_files")
-    .insert({ study_course_id: studyCourseId, filename, storage_path: storagePath, status: "pending" })
+    .insert({ study_course_id: studyCourseId, filename, storage_path: storagePath, status: "pending", user_id: userId })
     .select()
     .single()
 
@@ -150,7 +151,7 @@ export async function uploadFile(studyCourseId: string, file: File): Promise<Stu
   }
 
   const storagePath = await uploadCourseFile(userData.user.id, studyCourseId, file)
-  return createStudyCourseFile(studyCourseId, file.name, storagePath)
+  return createStudyCourseFile(studyCourseId, file.name, storagePath, userData.user.id)
 }
 
 export async function deleteFile(studyCourseId: string, fileId: string): Promise<void> {
