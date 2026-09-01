@@ -10,6 +10,7 @@ import {
   Settings,
   LogOut,
   ChevronUp,
+  GraduationCap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getSupabaseClient } from "@/lib/supabase"
@@ -162,9 +163,8 @@ export function AppShell({ children }: Props) {
           <p className="truncate text-[13px] font-semibold leading-tight">
             {user?.email?.split("@")[0] ?? "…"}
           </p>
-          <p className="flex items-center gap-1 text-[11px] text-success">
-            <span className="h-1.5 w-1.5 rounded-full bg-success" />
-            En ligne
+          <p className="truncate text-[11px] text-muted-foreground">
+            {user?.email ?? ""}
           </p>
         </div>
         <ChevronUp className={cn("h-3.5 w-3.5 flex-shrink-0 text-muted-foreground transition-transform", profileMenuOpen && "rotate-180")} />
@@ -206,8 +206,8 @@ export function AppShell({ children }: Props) {
         )}
       >
         <div className="flex items-center gap-2.5 px-3.5 py-4">
-          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-ring text-sm font-bold text-white">
-            É
+          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-ring text-white">
+            <GraduationCap className="h-4 w-4" />
           </div>
           <div>
             <p className="text-sm font-bold leading-tight">Étude</p>

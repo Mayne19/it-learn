@@ -7,7 +7,7 @@ import { Alert, AlertDescription, AlertAction } from "@/components/ui/alert"
 import { Spinner } from "@/components/ui/spinner"
 import { Badge } from "@/components/ui/badge"
 import { CodeBlock } from "@/components/code-block"
-import { AlertCircleIcon, BookOpen, CheckCircle2, ChevronDown, Lightbulb, RefreshCw, ArrowRight } from "lucide-react"
+import { AlertCircleIcon, BookOpen, CheckCircle2, ChevronDown, Lightbulb, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getApiErrorMessage } from "@/lib/api-errors"
 import { getCachedLesson, saveLessonToCache } from "@/lib/study/lesson-queries"
@@ -196,7 +196,7 @@ export function DetailedLessonView({ chapter, lang }: Props) {
                 <ul className="space-y-1.5">
                   {lesson.key_points_de.map((pt, i) => (
                     <li key={i} className="leading-7 flex items-start gap-2 text-sm">
-                      <span className="text-success mt-1">✓</span> {pt}
+                      <CheckCircle2 className="h-4 w-4 flex-shrink-0 mt-1 text-success" /> {pt}
                     </li>
                   ))}
                 </ul>

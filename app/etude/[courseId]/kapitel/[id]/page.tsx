@@ -2,7 +2,19 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Zap, Lightbulb } from "lucide-react"
+import {
+  ArrowLeft,
+  Zap,
+  Lightbulb,
+  Code2,
+  Bug,
+  PenLine,
+  ListChecks,
+  Search,
+  Link2,
+  CheckCircle2,
+  Network,
+} from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { getApiErrorMessage } from "@/lib/api-errors"
 import { listStudyChapters, getStudyChapter, type StudyChapterWithCourseTitle } from "@/lib/study/lesson-queries"
@@ -120,14 +132,14 @@ export default function StudyChapterPage({
           {exerciseSlots.map(slot => (
             <Badge key={slot.type} variant="secondary" className="text-xs">
               {slot.type === "speedRound" && <Zap className="mr-1 h-3 w-3" />}
-              {slot.type === "code" && <span className="mr-1">{'</>'}</span>}
-              {slot.type === "bugHunt" && <span className="mr-1">🐛</span>}
-              {slot.type === "fillBlank" && <span className="mr-1">✏️</span>}
-              {slot.type === "mcq" && <span className="mr-1">📝</span>}
-              {slot.type === "codeAnalysis" && <span className="mr-1">🔍</span>}
-              {slot.type === "matching" && <span className="mr-1">🔗</span>}
-              {slot.type === "trueFalse" && <span className="mr-1">✅</span>}
-              {slot.type === "conceptMap" && <span className="mr-1">🗺️</span>}
+              {slot.type === "code" && <Code2 className="mr-1 h-3 w-3" />}
+              {slot.type === "bugHunt" && <Bug className="mr-1 h-3 w-3" />}
+              {slot.type === "fillBlank" && <PenLine className="mr-1 h-3 w-3" />}
+              {slot.type === "mcq" && <ListChecks className="mr-1 h-3 w-3" />}
+              {slot.type === "codeAnalysis" && <Search className="mr-1 h-3 w-3" />}
+              {slot.type === "matching" && <Link2 className="mr-1 h-3 w-3" />}
+              {slot.type === "trueFalse" && <CheckCircle2 className="mr-1 h-3 w-3" />}
+              {slot.type === "conceptMap" && <Network className="mr-1 h-3 w-3" />}
               {slot.type === "speedRound" ? "Speed Round" : slot.type}
             </Badge>
           ))}

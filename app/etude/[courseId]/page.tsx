@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertAction } from "@/components/ui/alert"
 import { Spinner } from "@/components/ui/spinner"
-import { ArrowLeft, ArrowRight, FileText, Sparkles, AlertCircle, CheckCircle2, BookOpen } from "lucide-react"
+import { ArrowLeft, ArrowRight, FileText, Sparkles, AlertCircle, CheckCircle2, BookOpen, Code2, BookMarked, Zap } from "lucide-react"
 import { getApiErrorMessage } from "@/lib/api-errors"
 import { getStudyCourse, listFiles, updateStudyCourseFileStatus, saveIngestResult, countStudyChapters } from "@/lib/study/queries"
 import { listStudyChapters } from "@/lib/study/lesson-queries"
@@ -16,10 +16,10 @@ import type { IngestResult } from "@/lib/study/ingest-prompt"
 import type { IngestPlan } from "@/app/api/study/ingest/plan/route"
 import type { StudyCourse, StudyCourseFile, StudyChapter } from "@/lib/study/types"
 
-const PROFILE_ICON: Record<string, string> = {
-  programming: "</>",
-  theory: "📖",
-  mixed: "⚡",
+const PROFILE_ICON: Record<string, typeof Code2> = {
+  programming: Code2,
+  theory: BookMarked,
+  mixed: Zap,
 }
 
 export default function EtudeCoursePage() {
@@ -151,8 +151,11 @@ export default function EtudeCoursePage() {
       </Link>
 
       <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-ring/10 text-lg">
-          {PROFILE_ICON[course.profile] ?? "⚡"}
+        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-ring/10 text-ring">
+          {(() => {
+            const Icon = PROFILE_ICON[course.profile] ?? Zap
+            return <Icon className="h-5 w-5" />
+          })()}
         </div>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{course.title}</h1>
