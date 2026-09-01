@@ -30,31 +30,10 @@ export async function uploadCourseFile(
   return path
 }
 
-export async function downloadCourseFile(storagePath: string): Promise<Blob> {
-  const { data, error } = await getSupabaseClient().storage.from(BUCKET).download(storagePath)
-
-  if (error || !data) {
-    throw new Error(`Échec du téléchargement: ${error?.message ?? "fichier introuvable"}`)
-  }
-
-  return data
-}
-
 export async function deleteCourseFile(storagePath: string): Promise<void> {
   const { error } = await getSupabaseClient().storage.from(BUCKET).remove([storagePath])
 
   if (error) {
     throw new Error(`Échec de la suppression: ${error.message}`)
   }
-}
-
-export async function blobToBase64(blob: Blob): Promise<string> {
-  const buffer = await blob.arrayBuffer()
-  const bytes = new Uint8Array(buffer)
-  let binary = ""
-  const chunkSize = 0x8000
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize))
-  }
-  return btoa(binary)
 }
