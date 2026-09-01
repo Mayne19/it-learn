@@ -206,6 +206,24 @@ export async function saveIngestResult(
     throw new Error("Utilisateur non authentifié")
   }
 
+  // sourceFileId et studyCourseId viennent tous les deux du client — rien
+  // côté API d'ingestion ne les recoupe (elle ne connaît que fileId, pas le
+  // cours auquel le résultat sera rattaché). Sans ce contrôle, un mauvais
+  // couple (fileId, courseId) attacherait silencieusement des chapitres au
+  // mauvais cours de l'utilisateur.
+  const { data: fileRow, error: fileCheckError } = await client
+    .from("study_course_files")
+    .select("study_course_id")
+    .eq("id", sourceFileId)
+    .maybeSingle()
+
+  if (fileCheckError || !fileRow) {
+    throw new Error("Fichier source introuvable ou accès refusé")
+  }
+  if (fileRow.study_course_id !== studyCourseId) {
+    throw new Error("Ce fichier n'appartient pas au cours indiqué")
+  }
+
   const { error: profileError } = await client
     .from("study_courses")
     .update({ profile: ingestResult.profile as CourseProfile, detected_lang: ingestResult.detected_language })
