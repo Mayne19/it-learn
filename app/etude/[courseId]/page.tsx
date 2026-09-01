@@ -12,7 +12,6 @@ import { ArrowLeft, ArrowRight, FileText, Sparkles, AlertCircle, CheckCircle2, B
 import { getApiErrorMessage } from "@/lib/api-errors"
 import { getStudyCourse, listFiles, updateStudyCourseFileStatus, saveIngestResult, countStudyChapters } from "@/lib/study/queries"
 import { listStudyChapters } from "@/lib/study/lesson-queries"
-import { downloadCourseFile, blobToBase64 } from "@/lib/study/storage"
 import type { IngestResult } from "@/lib/study/ingest-prompt"
 import type { StudyCourse, StudyCourseFile, StudyChapter } from "@/lib/study/types"
 
@@ -60,13 +59,13 @@ export default function EtudeCoursePage() {
     try {
       await updateStudyCourseFileStatus(file.id, "processing")
 
-      const blob = await downloadCourseFile(file.storage_path)
-      const pdfBase64 = await blobToBase64(blob)
-
+      // Le PDF ne transite jamais par le navigateur ici — la route API le
+      // télécharge elle-même depuis Storage (voir app/api/study/ingest),
+      // pour rester sous la limite de payload des fonctions Vercel.
       const res = await fetch("/api/study/ingest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pdfBase64, filename: file.file_name }),
+        body: JSON.stringify({ fileId: file.id }),
       })
       const data = await res.json()
       if (!res.ok) {
