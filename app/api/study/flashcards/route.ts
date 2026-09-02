@@ -1,6 +1,7 @@
 import { buildFlashcardPrompt } from '@/lib/study/flashcard-prompt'
 import { getApiErrorMessage } from '@/lib/api-errors'
 import { callClaude, extractJSON, ClaudeApiError } from '@/lib/study/ai-client'
+import { getChapterForPrompt } from '@/lib/study/get-chapter-for-prompt'
 
 export async function POST(req: Request) {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -10,9 +11,19 @@ export async function POST(req: Request) {
     )
   }
 
-  const { chapter } = await req.json()
-  if (!chapter?.title_de || !Array.isArray(chapter?.concepts)) {
-    return Response.json({ error: 'Chapitre invalide' }, { status: 400 })
+  const { chapterId } = await req.json()
+  if (!chapterId || typeof chapterId !== 'string') {
+    return Response.json({ error: 'chapterId manquant' }, { status: 400 })
+  }
+
+  // Résolu via RLS — la route n'accepte plus le contenu du chapitre tel
+  // quel depuis le client (n'importe qui pouvait inventer un chapitre et
+  // déclencher un appel Anthropic payant sans compte). Ici, un chapitre
+  // introuvable ou n'appartenant pas à l'appelant renvoie le même 404 —
+  // pas de session valide donne systématiquement ce résultat.
+  const chapter = await getChapterForPrompt(chapterId)
+  if (!chapter) {
+    return Response.json({ error: 'Chapitre introuvable ou accès refusé' }, { status: 404 })
   }
 
   const prompt = buildFlashcardPrompt(chapter)

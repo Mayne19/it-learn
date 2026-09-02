@@ -149,7 +149,7 @@ export default function StudyChapterPage({
       <div className="space-y-4">
         <DetailedLessonView chapter={chapter} lang={lang} />
         <FlashcardReview chapter={chapter} />
-        <SpeedRound chapter={chapter} profile={chapter.profile} lang={lang} />
+        <SpeedRound chapter={chapter} lang={lang} />
       </div>
 
       {/* Navigation between chapters */}

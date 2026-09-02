@@ -32,12 +32,12 @@ export function DetailedLessonView({ chapter, lang }: Props) {
     const res = await fetch('/api/study/lesson', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chapter })
+      body: JSON.stringify({ chapterId: chapter.id })
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error ?? 'Erreur')
     return data as DetailedLesson
-  }, [chapter])
+  }, [chapter.id])
 
   const loadLesson = useCallback(async (forceRegenerate: boolean) => {
     setLoading(true)
