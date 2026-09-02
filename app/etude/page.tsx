@@ -16,7 +16,12 @@ import { listStudyCourses } from "@/lib/study/queries"
 import { getExerciseSlots } from "@/lib/study/exercise-strategy"
 import { getExerciseHistory } from "@/lib/study/exercise-history-queries"
 import { pickNextExercise } from "@/lib/study/next-up"
+import { getStudyStreak, highestReachedMilestone, type StudyStreak } from "@/lib/study/streak"
+import { StreakBadge } from "@/components/study/streak-badge"
+import { MilestoneCelebration } from "@/components/study/milestone-celebration"
 import type { StudyExerciseType } from "@/lib/study/types"
+
+const SEEN_MILESTONE_KEY = "etude:lastSeenStreakMilestone"
 
 const EXERCISE_LABELS: Record<StudyExerciseType, string> = {
   mcq: "un QCM",
@@ -40,6 +45,8 @@ interface CourseSummary {
 export default function EtudeDashboardPage() {
   const [chapters, setChapters] = useState<StudyChapterWithCourse[]>([])
   const [hasCourses, setHasCourses] = useState(false)
+  const [streak, setStreak] = useState<StudyStreak | null>(null)
+  const [celebratingMilestone, setCelebratingMilestone] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -53,13 +60,29 @@ export default function EtudeDashboardPage() {
         // générés" — sans ça, les deux affichaient le même écran vide
         // trompeur ("Crée ton premier cours") alors que dans le second cas
         // le cours existe déjà, il manque juste l'étape de génération.
-        const [all, courses] = await Promise.all([
+        const [all, courses, streakResult] = await Promise.all([
           listAllStudyChaptersForUser(user.id),
           listStudyCourses(user.id),
+          getStudyStreak(user.id),
         ])
         if (cancelled) return
         setChapters(all)
         setHasCourses(courses.length > 0)
+        setStreak(streakResult)
+
+        // Célébration une seule fois par palier — mémorisé en localStorage
+        // (purement cosmétique, pas grave si ça se rejoue sur un nouvel
+        // appareil ; try/catch car localStorage peut lever en navigation
+        // privée stricte sur certains navigateurs).
+        const reached = highestReachedMilestone(streakResult.current)
+        if (reached !== null) {
+          try {
+            const lastSeen = Number(localStorage.getItem(SEEN_MILESTONE_KEY) ?? "0")
+            if (reached > lastSeen) setCelebratingMilestone(reached)
+          } catch {
+            // Pas de célébration si localStorage est inaccessible — jamais bloquant.
+          }
+        }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e))
       } finally {
@@ -69,6 +92,17 @@ export default function EtudeDashboardPage() {
     run()
     return () => { cancelled = true }
   }, [])
+
+  function closeCelebration() {
+    if (celebratingMilestone !== null) {
+      try {
+        localStorage.setItem(SEEN_MILESTONE_KEY, String(celebratingMilestone))
+      } catch {
+        // Pas grave si ça ne persiste pas — au pire la célébration se rejoue.
+      }
+    }
+    setCelebratingMilestone(null)
+  }
 
   const dueChapters = useMemo(
     () => chapters.filter(c => c.next_review && new Date(c.next_review) <= new Date()),
@@ -203,6 +237,8 @@ export default function EtudeDashboardPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+      <MilestoneCelebration milestone={celebratingMilestone} onClose={closeCelebration} />
+
       {/* Header with streak & progress */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -213,11 +249,14 @@ export default function EtudeDashboardPage() {
               : "Tout est à jour — bravo !"}
           </p>
         </div>
-        <Link href="/etude/dashboard">
-          <Button variant="outline" size="sm" className="gap-2">
-            <Star className="h-4 w-4" /> Gérer mes cours
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          {streak && <StreakBadge streak={streak} />}
+          <Link href="/etude/dashboard">
+            <Button variant="outline" size="sm" className="gap-2">
+              <Star className="h-4 w-4" /> Gérer mes cours
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Prochain exercice recommandé — pondéré par pickNextExercise selon

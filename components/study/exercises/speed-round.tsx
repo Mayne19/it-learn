@@ -54,6 +54,11 @@ export function SpeedRound({ chapter, lang }: Props) {
   const [selected, setSelected] = useState<number | null>(null)
   const [finished, setFinished] = useState(false)
   const [answers, setAnswers] = useState<(boolean | null)[]>([])
+  // Incrémenté à chaque bonne réponse — clé React pour rejouer le "+1"
+  // flottant même sur des coups consécutifs (un nouveau montage à chaque
+  // fois, plutôt qu'un booléen qui ne rejouerait pas l'animation deux fois
+  // de suite sans repasser par false entre les deux).
+  const [pointsPulseKey, setPointsPulseKey] = useState<number | null>(null)
 
   const loadQuestions = useCallback(async () => {
     setLoading(true)
@@ -100,6 +105,7 @@ export function SpeedRound({ chapter, lang }: Props) {
         setBestStreak(b => Math.max(b, next))
         return next
       })
+      setPointsPulseKey(k => (k ?? 0) + 1)
     } else {
       setStreak(0)
     }
@@ -117,6 +123,14 @@ export function SpeedRound({ chapter, lang }: Props) {
     const timer = setTimeout(() => setSecondsLeft(s => s - 1), 1000)
     return () => clearTimeout(timer)
   }, [secondsLeft, current, selected, finished, handleAnswer])
+
+  // Démonte le "+1" flottant après son animation — sinon il reste figé
+  // visible dans son état final plutôt que de vraiment disparaître.
+  useEffect(() => {
+    if (pointsPulseKey === null) return
+    const timer = setTimeout(() => setPointsPulseKey(null), 700)
+    return () => clearTimeout(timer)
+  }, [pointsPulseKey])
 
   function next() {
     if (!questions) return
@@ -232,7 +246,17 @@ export function SpeedRound({ chapter, lang }: Props) {
                 <Flame className="h-3 w-3" /> {streak}
               </Badge>
             )}
-            <span className="font-mono tabular-nums font-medium">{score} pts</span>
+            <span className="relative font-mono tabular-nums font-medium">
+              {score} pts
+              {pointsPulseKey !== null && (
+                <span
+                  key={pointsPulseKey}
+                  className="pointer-events-none absolute -top-3.5 left-1/2 -translate-x-1/2 animate-in fade-in slide-in-from-bottom-2 text-success font-semibold duration-500"
+                >
+                  +1
+                </span>
+              )}
+            </span>
           </div>
         </div>
         {/* Timer bar */}
@@ -272,9 +296,9 @@ export function SpeedRound({ chapter, lang }: Props) {
                   onClick={() => handleAnswer(i)}
                   disabled={revealed}
                   className={cn(
-                    "rounded-lg border px-3 py-2.5 text-left text-sm transition-all",
+                    "rounded-lg border px-3 py-2.5 text-left text-sm transition-all duration-200",
                     !revealed && "border-border hover:border-ring/40 hover:bg-muted/40",
-                    revealed && isCorrect && "border-success/40 bg-success/10 text-success font-medium",
+                    revealed && isCorrect && "scale-[1.02] border-success/40 bg-success/10 text-success font-medium shadow-sm",
                     revealed && isSelected && !isCorrect && "border-destructive/40 bg-destructive/10 text-destructive",
                     revealed && !isCorrect && !isSelected && "border-border/50 opacity-50",
                   )}
