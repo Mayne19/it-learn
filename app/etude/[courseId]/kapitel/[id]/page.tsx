@@ -21,6 +21,7 @@ import { listStudyChapters, getStudyChapter, type StudyChapterWithCourseTitle } 
 import { DetailedLessonView } from "@/components/study/detailed-lesson-view"
 import { FlashcardReview } from "@/components/study/flashcard-review"
 import { SpeedRound } from "@/components/study/exercises/speed-round"
+import { MemoryMatch } from "@/components/study/exercises/memory-match"
 import { getExerciseSlots } from "@/lib/study/exercise-strategy"
 import type { StudyChapter } from "@/lib/study/types"
 import type { Lang } from "@/lib/chapters/types"
@@ -150,6 +151,7 @@ export default function StudyChapterPage({
         <DetailedLessonView chapter={chapter} lang={lang} />
         <FlashcardReview chapter={chapter} />
         <SpeedRound chapter={chapter} lang={lang} />
+        {exerciseSlots.some(s => s.type === "matching") && <MemoryMatch chapter={chapter} />}
       </div>
 
       {/* Navigation between chapters */}
