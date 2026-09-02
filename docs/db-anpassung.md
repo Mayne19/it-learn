@@ -52,6 +52,8 @@ Vérifier 1/2 : `select column_name from information_schema.columns where table_
 | `study_lessons_cache` | Cours détaillé généré, en cache | via jointure `study_chapters` |
 | `study_flashcards` | Cartes de révision par chapitre | `user_id` direct |
 | `study_flashcards_progress` | Progression SM-2 par carte | `user_id` direct |
+| `study_exercise_history` | Historique des réponses au Speed Round, alimente pickNextExercise | `user_id` direct |
+| `study_ai_usage` | Compteur d'appels IA par utilisateur/heure, pour le rate-limiting | `user_id` direct |
 
 Colonnes ajoutées vs. version initiale, et pourquoi :
 
@@ -228,6 +230,83 @@ create policy "study_flashcards_progress_user_own"
   on public.study_flashcards_progress for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- Un enregistrement par réponse au Speed Round — alimente
+-- lib/study/next-up.ts (pickNextExercise), qui pondère le prochain
+-- exercice suggéré par chapitre selon le taux de réussite réel observé.
+-- Append-only côté application (jamais de update), pas de contrainte
+-- d'unicité : plusieurs tentatives sur le même (chapitre, type) sont
+-- attendues et voulues.
+create table if not exists public.study_exercise_history (
+  id                uuid primary key default gen_random_uuid(),
+  study_chapter_id  uuid not null references public.study_chapters(id) on delete cascade,
+  user_id           uuid not null references auth.users(id) on delete cascade,
+  exercise_type     text not null,
+  correct           boolean not null,
+  answered_at       timestamptz not null default now()
+);
+
+alter table public.study_exercise_history enable row level security;
+
+drop policy if exists "study_exercise_history_user_own" on public.study_exercise_history;
+create policy "study_exercise_history_user_own"
+  on public.study_exercise_history for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- Rate-limiting par utilisateur/catégorie/heure — un compte authentifié
+-- (le tien ou un compte compromis) ne peut plus déclencher un nombre
+-- illimité d'appels Anthropic payants. Une ligne par (user_id, category,
+-- hour_bucket), incrémentée atomiquement par la fonction ci-dessous — pas
+-- un log détaillé par appel, juste un compteur, la table reste petite
+-- (les vieux buckets ne sont jamais lus après leur heure, purge périodique
+-- optionnelle plus tard si le volume le justifie).
+create table if not exists public.study_ai_usage (
+  user_id      uuid not null references auth.users(id) on delete cascade,
+  category     text not null,
+  hour_bucket  timestamptz not null,
+  count        integer not null default 0,
+
+  primary key (user_id, category, hour_bucket)
+);
+
+alter table public.study_ai_usage enable row level security;
+
+drop policy if exists "study_ai_usage_user_own" on public.study_ai_usage;
+create policy "study_ai_usage_user_own"
+  on public.study_ai_usage for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- security definer : nécessaire pour que l'incrémentation soit atomique
+-- (insert ... on conflict ... do update) sous RLS, appelée par
+-- lib/study/rate-limit.ts via supabase.rpc(). Le check auth.uid() = p_user_id
+-- à l'intérieur remplace la policy RLS habituelle (contournée par security
+-- definer) — un appelant ne peut incrémenter que son propre compteur.
+create or replace function public.increment_ai_usage(p_category text)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_bucket timestamptz := date_trunc('hour', now());
+  v_count integer;
+begin
+  if v_user_id is null then
+    raise exception 'Non authentifié';
+  end if;
+
+  insert into public.study_ai_usage (user_id, category, hour_bucket, count)
+  values (v_user_id, p_category, v_bucket, 1)
+  on conflict (user_id, category, hour_bucket)
+    do update set count = study_ai_usage.count + 1
+  returning count into v_count;
+
+  return v_count;
+end;
+$$;
 ```
 
 ## 4. Vue de progression (`mastery_pct`, `next_review`)

@@ -1,6 +1,7 @@
 import { getApiErrorMessage } from '@/lib/api-errors'
 import { getSupabaseServerClient } from '@/lib/supabase-server'
 import { callClaude, extractJSON } from '@/lib/study/ai-client'
+import { checkAndConsumeAiQuota, RateLimitError } from '@/lib/study/rate-limit'
 import { buildChapterBoundariesPrompt } from '@/lib/study/chapter-boundaries-prompt'
 import {
   countPdfPages,
@@ -69,6 +70,13 @@ export async function POST(req: Request) {
       { error: getApiErrorMessage('ANTHROPIC_API_KEY') },
       { status: 500 }
     )
+  }
+
+  try {
+    await checkAndConsumeAiQuota(supabase, 'light')
+  } catch (e) {
+    if (e instanceof RateLimitError) return Response.json({ error: e.message }, { status: 429 })
+    throw e
   }
 
   try {

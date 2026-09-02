@@ -2,7 +2,8 @@ import { buildIngestPrompt, type IngestResult } from '@/lib/study/ingest-prompt'
 import { validateChapters } from '@/lib/study/validate-chapters'
 import { getApiErrorMessage } from '@/lib/api-errors'
 import { getSupabaseServerClient } from '@/lib/supabase-server'
-import { extractPdfPageRange } from '@/lib/study/pdf-split'
+import { extractPdfPageRange, countPdfPages } from '@/lib/study/pdf-split'
+import { checkAndConsumeAiQuota, RateLimitError } from '@/lib/study/rate-limit'
 
 // Limite dure de l'API Anthropic pour les PDF en pièce jointe (contexte 1M) —
 // voir docs/etude-mode-plan.md §5.3 étape 1. Un fichier plus gros doit être
@@ -26,6 +27,13 @@ export async function POST(req: Request) {
   }
 
   const supabase = await getSupabaseServerClient()
+
+  try {
+    await checkAndConsumeAiQuota(supabase, 'heavy')
+  } catch (e) {
+    if (e instanceof RateLimitError) return Response.json({ error: e.message }, { status: 429 })
+    throw e
+  }
 
   // Le fichier n'a jamais transité par le navigateur ici — la route lit le
   // PDF directement depuis Storage côté serveur, plutôt que de le recevoir
@@ -60,8 +68,21 @@ export async function POST(req: Request) {
   // tranches par /api/study/ingest/plan — celle-ci ne traite que la plage
   // de pages demandée, jamais le PDF entier.
   if (typeof startPage === 'number' && typeof endPage === 'number') {
-    const sliceBytes = await extractPdfPageRange(new Uint8Array(buffer), startPage, endPage)
-    buffer = Buffer.from(sliceBytes)
+    const totalPages = await countPdfPages(new Uint8Array(buffer))
+    if (!Number.isInteger(startPage) || !Number.isInteger(endPage) ||
+        startPage < 1 || endPage < startPage || endPage > totalPages) {
+      return Response.json(
+        { error: `Plage de pages invalide (${startPage}-${endPage}) pour un document de ${totalPages} pages.` },
+        { status: 400 }
+      )
+    }
+    try {
+      const sliceBytes = await extractPdfPageRange(new Uint8Array(buffer), startPage, endPage)
+      buffer = Buffer.from(sliceBytes)
+    } catch (e) {
+      console.error('[study/ingest] découpage de la plage de pages échoué', e)
+      return Response.json({ error: 'Impossible de découper le PDF sur cette plage de pages.' }, { status: 500 })
+    }
   }
 
   const pdfBase64 = buffer.toString('base64')

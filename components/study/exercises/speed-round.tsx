@@ -6,16 +6,16 @@ import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Badge } from "@/components/ui/badge"
 import { CodeBlock } from "@/components/code-block"
-import { Zap, Flame, RefreshCw, Trophy, Clock, CheckCircle, XCircle } from "lucide-react"
+import { Zap, Flame, RefreshCw, Trophy, CheckCircle, XCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getApiErrorMessage } from "@/lib/api-errors"
-import type { CourseProfile, StudyChapter } from "@/lib/study/types"
+import { recordExerciseAttempt } from "@/lib/study/exercise-history-queries"
+import type { StudyChapter } from "@/lib/study/types"
 import type { SpeedRoundQuestion } from "@/lib/study/speed-round-prompt"
 import type { Lang } from "@/lib/chapters/types"
 
 interface Props {
   chapter: StudyChapter
-  profile: CourseProfile
   lang: Lang
 }
 
@@ -42,7 +42,7 @@ function prepareQuestions(questions: SpeedRoundQuestion[]): ShuffledQuestion[] {
   })
 }
 
-export function SpeedRound({ chapter, profile, lang }: Props) {
+export function SpeedRound({ chapter, lang }: Props) {
   const [questions, setQuestions] = useState<ShuffledQuestion[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -69,7 +69,7 @@ export function SpeedRound({ chapter, profile, lang }: Props) {
       const res = await fetch('/api/study/speed-round', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chapter, profile })
+        body: JSON.stringify({ chapterId: chapter.id })
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Erreur')
@@ -80,7 +80,7 @@ export function SpeedRound({ chapter, profile, lang }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [chapter, profile])
+  }, [chapter.id])
 
   useEffect(() => {
     Promise.resolve().then(() => loadQuestions())
@@ -103,7 +103,10 @@ export function SpeedRound({ chapter, profile, lang }: Props) {
     } else {
       setStreak(0)
     }
-  }, [current, selected])
+    // Best-effort, ne bloque jamais la réponse affichée à l'utilisateur —
+    // alimente pickNextExercise (lib/study/next-up.ts).
+    recordExerciseAttempt(chapter.id, "speedRound", correct)
+  }, [current, selected, chapter.id])
 
   useEffect(() => {
     if (!current || selected !== null || finished) return

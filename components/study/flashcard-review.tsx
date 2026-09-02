@@ -44,7 +44,7 @@ export function FlashcardReview({ chapter }: Props) {
         const res = await fetch('/api/study/flashcards', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chapter })
+          body: JSON.stringify({ chapterId: chapter.id })
         })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error ?? 'Erreur')

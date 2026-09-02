@@ -1,7 +1,9 @@
 import { buildSpeedRoundPrompt } from '@/lib/study/speed-round-prompt'
 import { getApiErrorMessage } from '@/lib/api-errors'
 import { callClaude, extractJSON, ClaudeApiError } from '@/lib/study/ai-client'
-import type { CourseProfile } from '@/lib/study/types'
+import { getChapterForPrompt } from '@/lib/study/get-chapter-for-prompt'
+import { getSupabaseServerClient } from '@/lib/supabase-server'
+import { checkAndConsumeAiQuota, RateLimitError } from '@/lib/study/rate-limit'
 
 export async function POST(req: Request) {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -11,15 +13,27 @@ export async function POST(req: Request) {
     )
   }
 
-  const { chapter, profile } = await req.json()
-  if (!chapter?.title_de || !Array.isArray(chapter?.concepts)) {
-    return Response.json({ error: 'Chapitre invalide' }, { status: 400 })
-  }
-  if (!['programming', 'theory', 'mixed'].includes(profile)) {
-    return Response.json({ error: 'Profil invalide' }, { status: 400 })
+  const { chapterId } = await req.json()
+  if (!chapterId || typeof chapterId !== 'string') {
+    return Response.json({ error: 'chapterId manquant' }, { status: 400 })
   }
 
-  const prompt = buildSpeedRoundPrompt(chapter, profile as CourseProfile)
+  try {
+    await checkAndConsumeAiQuota(await getSupabaseServerClient(), 'light')
+  } catch (e) {
+    if (e instanceof RateLimitError) return Response.json({ error: e.message }, { status: 429 })
+    throw e
+  }
+
+  // Résolu via RLS — profile vient aussi du chapitre en DB plutôt que du
+  // client (study_chapters.profile, synchronisé par trigger depuis
+  // study_courses.profile), voir get-chapter-for-prompt.ts.
+  const chapter = await getChapterForPrompt(chapterId)
+  if (!chapter) {
+    return Response.json({ error: 'Chapitre introuvable ou accès refusé' }, { status: 404 })
+  }
+
+  const prompt = buildSpeedRoundPrompt(chapter, chapter.profile)
 
   try {
     const text = await callClaude({ model: 'claude-haiku-4-5', prompt, maxTokens: 3000 })
