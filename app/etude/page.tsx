@@ -16,6 +16,8 @@ import { listStudyCourses } from "@/lib/study/queries"
 import { getExerciseSlots } from "@/lib/study/exercise-strategy"
 import { getExerciseHistory } from "@/lib/study/exercise-history-queries"
 import { pickNextExercise } from "@/lib/study/next-up"
+import { getStudyStreak, type StudyStreak } from "@/lib/study/streak"
+import { StreakBadge } from "@/components/study/streak-badge"
 import type { StudyExerciseType } from "@/lib/study/types"
 
 const EXERCISE_LABELS: Record<StudyExerciseType, string> = {
@@ -40,6 +42,7 @@ interface CourseSummary {
 export default function EtudeDashboardPage() {
   const [chapters, setChapters] = useState<StudyChapterWithCourse[]>([])
   const [hasCourses, setHasCourses] = useState(false)
+  const [streak, setStreak] = useState<StudyStreak | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -53,13 +56,15 @@ export default function EtudeDashboardPage() {
         // générés" — sans ça, les deux affichaient le même écran vide
         // trompeur ("Crée ton premier cours") alors que dans le second cas
         // le cours existe déjà, il manque juste l'étape de génération.
-        const [all, courses] = await Promise.all([
+        const [all, courses, streakResult] = await Promise.all([
           listAllStudyChaptersForUser(user.id),
           listStudyCourses(user.id),
+          getStudyStreak(user.id),
         ])
         if (cancelled) return
         setChapters(all)
         setHasCourses(courses.length > 0)
+        setStreak(streakResult)
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e))
       } finally {
@@ -213,11 +218,14 @@ export default function EtudeDashboardPage() {
               : "Tout est à jour — bravo !"}
           </p>
         </div>
-        <Link href="/etude/dashboard">
-          <Button variant="outline" size="sm" className="gap-2">
-            <Star className="h-4 w-4" /> Gérer mes cours
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          {streak && <StreakBadge streak={streak} />}
+          <Link href="/etude/dashboard">
+            <Button variant="outline" size="sm" className="gap-2">
+              <Star className="h-4 w-4" /> Gérer mes cours
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Prochain exercice recommandé — pondéré par pickNextExercise selon
