@@ -2,6 +2,8 @@ import { buildFlashcardPrompt } from '@/lib/study/flashcard-prompt'
 import { getApiErrorMessage } from '@/lib/api-errors'
 import { callClaude, extractJSON, ClaudeApiError } from '@/lib/study/ai-client'
 import { getChapterForPrompt } from '@/lib/study/get-chapter-for-prompt'
+import { getSupabaseServerClient } from '@/lib/supabase-server'
+import { checkAndConsumeAiQuota, RateLimitError } from '@/lib/study/rate-limit'
 
 export async function POST(req: Request) {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -14,6 +16,13 @@ export async function POST(req: Request) {
   const { chapterId } = await req.json()
   if (!chapterId || typeof chapterId !== 'string') {
     return Response.json({ error: 'chapterId manquant' }, { status: 400 })
+  }
+
+  try {
+    await checkAndConsumeAiQuota(await getSupabaseServerClient(), 'light')
+  } catch (e) {
+    if (e instanceof RateLimitError) return Response.json({ error: e.message }, { status: 429 })
+    throw e
   }
 
   // Résolu via RLS — la route n'accepte plus le contenu du chapitre tel
