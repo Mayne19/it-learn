@@ -170,35 +170,57 @@ export function FlashcardReview({ chapter }: Props) {
         </div>
       </div>
 
-      {/* Card */}
-      <Card
-        className={cn(
-          "min-h-44 cursor-pointer border shadow-none transition-all duration-200",
-          flipped
-            ? "border-ring/40 bg-ring/5"
-            : "border-border/70 bg-card hover:border-ring/40",
-        )}
+      {/* Card — vrai retournement 3D (pas de plugin Tailwind pour ça, donc
+          les propriétés perspective/backface-visibility/rotateY passent en
+          style inline ; tout le reste — couleurs, layout — reste en
+          classes). Le recto reste monté sous le verso pendant la rotation
+          (backface-visibility: hidden le cache), pas de bascule de contenu
+          instantanée comme avant. */}
+      <div
+        className="min-h-44 cursor-pointer"
+        style={{ perspective: "1200px" }}
         onClick={() => setFlipped(f => !f)}
       >
-        <CardContent className="flex min-h-44 flex-col items-center justify-center gap-4 p-6 text-center">
-          {!flipped ? (
-            <>
+        <div
+          className="relative min-h-44 transition-transform duration-500 ease-out"
+          style={{
+            transformStyle: "preserve-3d",
+            transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+          }}
+        >
+          {/* Front */}
+          <Card
+            className="absolute inset-0 min-h-44 border border-border/70 bg-card shadow-none hover:border-ring/40"
+            style={{ backfaceVisibility: "hidden" }}
+          >
+            <CardContent className="flex min-h-44 flex-col items-center justify-center gap-4 p-6 text-center">
               <p className="text-xl font-semibold">{card.front_de}</p>
               <p className="text-xs text-muted-foreground">Clique pour révéler</p>
-            </>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-lg">{card.back_de}</p>
-              <p className="text-sm text-muted-foreground italic">{card.back_fr}</p>
-              <p className="text-xs text-muted-foreground">Clique pour le recto</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
-      {/* Grade buttons */}
+          {/* Back */}
+          <Card
+            className="absolute inset-0 min-h-44 border border-ring/40 bg-ring/5 shadow-none"
+            style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+          >
+            <CardContent className="flex min-h-44 flex-col items-center justify-center gap-4 p-6 text-center">
+              <div className="space-y-3">
+                <p className="text-lg">{card.back_de}</p>
+                <p className="text-sm text-muted-foreground italic">{card.back_fr}</p>
+                <p className="text-xs text-muted-foreground">Clique pour le recto</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Grade buttons — apparition différée (delay-300) pour arriver après
+          que la rotation de la carte (duration-500) soit bien engagée,
+          plutôt que de sauter à l'écran avant même que le verso soit
+          visible. */}
       {flipped && (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid animate-in fade-in slide-in-from-bottom-1 grid-cols-2 gap-2 delay-300 duration-300 sm:grid-cols-4">
           {GRADE_CONFIG.map(({ grade, label, icon: Icon, tone }) => (
             <Button key={grade} variant="outline" className={cn("gap-1.5", tone)} onClick={() => handleGrade(grade)}>
               <Icon className="h-3.5 w-3.5" /> {label}
