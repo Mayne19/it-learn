@@ -22,6 +22,15 @@ export interface StudyStreak {
   activeToday: boolean
 }
 
+/** Paliers de célébration — mêmes valeurs que le plan d'origine (§3c). */
+export const STREAK_MILESTONES = [5, 10, 25, 50, 100] as const
+
+/** Le plus grand palier atteint par `current`, ou null si aucun. */
+export function highestReachedMilestone(current: number): number | null {
+  const reached = STREAK_MILESTONES.filter(m => current >= m)
+  return reached.length > 0 ? reached[reached.length - 1] : null
+}
+
 function toDayKey(iso: string): string {
   return iso.slice(0, 10) // "2026-09-02T10:00:00Z" -> "2026-09-02"
 }
