@@ -119,7 +119,14 @@ export async function POST(req: Request) {
         content: [
           {
             type: 'document',
-            source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 }
+            source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 },
+            // Le PDF de la tranche domine l'input (58k+ tokens observés,
+            // largement au-dessus du minimum cacheable ~1024) — si cette
+            // même tranche est renvoyée dans les 5 minutes (retry après un
+            // JSON invalide, par ex., cf. la validation plus bas), Claude
+            // réutilise le PDF déjà vu à ~10% du prix de l'input au lieu
+            // de le repayer plein tarif à chaque tentative.
+            cache_control: { type: 'ephemeral' }
           },
           { type: 'text', text: prompt }
         ]
@@ -135,6 +142,20 @@ export async function POST(req: Request) {
       { status: res.status }
     )
   }
+
+  // cache_read_input_tokens à 0 de façon répétée sur la même tranche
+  // signalerait un invalidateur silencieux (contenu du prompt qui varie,
+  // TTL de 5 min dépassé) — sans ce log, impossible de vérifier que le
+  // cache_control posé plus haut sert vraiment à quelque chose.
+  console.log('[study/ingest] usage', {
+    filename: fileRow.filename,
+    startPage,
+    endPage,
+    input_tokens: data.usage?.input_tokens,
+    cache_creation_input_tokens: data.usage?.cache_creation_input_tokens,
+    cache_read_input_tokens: data.usage?.cache_read_input_tokens,
+    output_tokens: data.usage?.output_tokens,
+  })
 
   if (data.stop_reason === 'max_tokens') {
     console.error('[study/ingest] réponse tronquée (max_tokens)', { filename: fileRow.filename, startPage, endPage })
