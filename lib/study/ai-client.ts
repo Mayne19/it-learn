@@ -1,3 +1,5 @@
+import { extractTextBlock } from "@/lib/anthropic-response"
+
 // claude-sonnet-4-6 n'est pas utilisé côté mode étude (seulement par le
 // mode Klausur, app/api/klausur|exercise|lesson) — gardé ici uniquement si
 // ce fichier est un jour partagé entre les deux modes.
@@ -40,8 +42,7 @@ export async function callClaude({ model, prompt, maxTokens = 2000 }: CallClaude
   const data = await res.json()
   if (!res.ok) throw new ClaudeApiError(data.error?.message ?? "Erreur Anthropic", res.status)
 
-  const text = data.content?.[0]?.text ?? ""
-  return text
+  return extractTextBlock(data.content)
 }
 
 export function extractJSON(text: string): unknown {

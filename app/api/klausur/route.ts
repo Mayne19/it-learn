@@ -2,6 +2,7 @@ import { getCourse } from '@/lib/courses'
 import { buildKlausurPrompt } from '@/lib/prompts'
 import { isKlausurRelevant } from '@/lib/chapters/types'
 import { getApiErrorMessage } from '@/lib/api-errors'
+import { extractTextBlock } from '@/lib/anthropic-response'
 
 export async function POST(req: Request) {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
     )
   }
 
-  const text = data.content?.[0]?.text ?? ''
+  const text = extractTextBlock(data.content)
   const start = text.indexOf('{')
   const end = text.lastIndexOf('}')
   if (start === -1 || end === -1) return Response.json({ error: 'Réponse invalide' }, { status: 500 })

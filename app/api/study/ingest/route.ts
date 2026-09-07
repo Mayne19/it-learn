@@ -4,6 +4,7 @@ import { getApiErrorMessage } from '@/lib/api-errors'
 import { getSupabaseServerClient } from '@/lib/supabase-server'
 import { extractPdfPageRange, countPdfPages } from '@/lib/study/pdf-split'
 import { checkAndConsumeAiQuota, RateLimitError } from '@/lib/study/rate-limit'
+import { extractTextBlock } from '@/lib/anthropic-response'
 
 // Limite dure de l'API Anthropic pour les PDF en pièce jointe (contexte 1M) —
 // voir docs/etude-mode-plan.md §5.3 étape 1. Un fichier plus gros doit être
@@ -136,7 +137,11 @@ export async function POST(req: Request) {
     )
   }
 
-  const text = data.content?.[0]?.text ?? ''
+  // content[0] n'est pas forcément le bloc de texte — Claude peut répondre
+  // avec un bloc "thinking" en tête suivi du bloc "text" (observé en
+  // pratique sur un PDF volumineux) ; lire content[0].text donnait alors
+  // une chaîne vide malgré une vraie réponse juste après.
+  const text = extractTextBlock(data.content)
   const start = text.indexOf('{')
   const end = text.lastIndexOf('}')
   if (start === -1 || end === -1) {
