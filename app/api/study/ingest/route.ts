@@ -140,9 +140,22 @@ export async function POST(req: Request) {
   const start = text.indexOf('{')
   const end = text.lastIndexOf('}')
   if (start === -1 || end === -1) {
-    console.error('[study/ingest] pas de JSON exploitable dans la réponse', text.slice(0, 500))
+    // stop_reason renseigne sur la vraie cause d'une réponse vide/inexploitable
+    // (refus, filtre de contenu, pause d'outil...) — sans lui, ce cas était
+    // indistinguable d'un simple aléa côté modèle.
+    console.error('[study/ingest] pas de JSON exploitable dans la réponse', {
+      stopReason: data.stop_reason,
+      contentBlockCount: data.content?.length ?? 0,
+      contentTypes: (data.content ?? []).map((b: { type?: string }) => b.type),
+      textExcerpt: text.slice(0, 500),
+      filename: fileRow.filename,
+      startPage,
+      endPage,
+    })
     return Response.json(
-      { error: `Réponse de l'IA inexploitable : "${text.slice(0, 200) || '(vide)'}"` },
+      {
+        error: `Réponse de l'IA inexploitable pour "${fileRow.filename}"${startPage ? ` (pages ${startPage}-${endPage})` : ''} — motif d'arrêt : ${data.stop_reason ?? 'inconnu'}. ${text.slice(0, 200) ? `Texte reçu : "${text.slice(0, 200)}"` : 'Aucun texte reçu.'}`,
+      },
       { status: 500 }
     )
   }
