@@ -107,6 +107,13 @@ export async function POST(req: Request) {
     body: JSON.stringify({
       model: 'claude-sonnet-5',
       max_tokens: 16000,
+      // L'extraction de chapitres est une tâche d'extraction structurée, pas
+      // un problème de raisonnement — le thinking par défaut de Sonnet 5
+      // ajoutait ~5500 tokens de raisonnement facturés (~60% du coût de
+      // sortie) sans changer le résultat. Vérifié sur un vrai document :
+      // effort "medium" élimine le thinking (thinking_tokens: 0) et
+      // détecte même un chapitre de plus (7 vs 6 à "low").
+      output_config: { effort: 'medium' },
       messages: [{
         role: 'user',
         content: [

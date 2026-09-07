@@ -5,10 +5,18 @@ import { extractTextBlock } from "@/lib/anthropic-response"
 // ce fichier est un jour partagé entre les deux modes.
 type ClaudeModel = "claude-sonnet-5" | "claude-sonnet-4-6" | "claude-haiku-4-5"
 
+type EffortLevel = "low" | "medium" | "high" | "xhigh" | "max"
+
 interface CallClaudeOptions {
   model: ClaudeModel
   prompt: string
   maxTokens?: number
+  /** Sonnet 5 uniquement — Haiku 4.5 n'a pas de paramètre effort (erreur si
+   * envoyé). Une extraction/génération structurée n'a pas besoin du
+   * raisonnement par défaut de Sonnet 5, qui ajoute des tokens de sortie
+   * facturés sans changer le résultat — voir ingest/route.ts pour la
+   * mesure (thinking_tokens: 0 à "medium", même qualité de résultat). */
+  effort?: EffortLevel
 }
 
 /** Porte le status HTTP Anthropic d'origine (ex. 429 rate-limit, 401 clé
@@ -21,7 +29,7 @@ export class ClaudeApiError extends Error {
   }
 }
 
-export async function callClaude({ model, prompt, maxTokens = 2000 }: CallClaudeOptions): Promise<string> {
+export async function callClaude({ model, prompt, maxTokens = 2000, effort }: CallClaudeOptions): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY manquante")
 
@@ -35,6 +43,7 @@ export async function callClaude({ model, prompt, maxTokens = 2000 }: CallClaude
     body: JSON.stringify({
       model,
       max_tokens: maxTokens,
+      ...(effort ? { output_config: { effort } } : {}),
       messages: [{ role: "user", content: prompt }],
     }),
   })

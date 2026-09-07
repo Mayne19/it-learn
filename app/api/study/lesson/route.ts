@@ -35,7 +35,9 @@ export async function POST(req: Request) {
   const prompt = buildDetailedLessonPrompt(chapter)
 
   try {
-    const text = await callClaude({ model: 'claude-sonnet-5', prompt, maxTokens: 6000 })
+    // Génération structurée (sections/exemples/pièges), pas un problème de
+    // raisonnement — voir ai-client.ts et ingest/route.ts pour la mesure.
+    const text = await callClaude({ model: 'claude-sonnet-5', prompt, maxTokens: 6000, effort: 'medium' })
     const lesson = extractJSON(text) as DetailedLesson
     return Response.json(lesson)
   } catch (e) {
