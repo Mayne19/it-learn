@@ -22,10 +22,10 @@ export async function getCachedLesson(studyChapterId: string): Promise<DetailedL
   return (data?.content as DetailedLesson) ?? null
 }
 
-export async function saveLessonToCache(studyChapterId: string, lesson: DetailedLesson): Promise<void> {
+export async function saveLessonToCache(studyChapterId: string, lesson: DetailedLesson, model: string): Promise<void> {
   const { error } = await getSupabaseClient()
     .from("study_lessons_cache")
-    .upsert({ study_chapter_id: studyChapterId, content: lesson, generated_at: new Date().toISOString() })
+    .upsert({ study_chapter_id: studyChapterId, content: lesson, model, generated_at: new Date().toISOString() })
 
   if (error) {
     throw new Error(`Impossible d'enregistrer le cours en cache: ${error.message}`)

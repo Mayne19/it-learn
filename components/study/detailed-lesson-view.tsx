@@ -28,7 +28,7 @@ export function DetailedLessonView({ chapter, lang }: Props) {
   const [showFr, setShowFr] = useState(false)
   const [activeSection, setActiveSection] = useState(0)
 
-  const generateLesson = useCallback(async (): Promise<DetailedLesson> => {
+  const generateLesson = useCallback(async (): Promise<DetailedLesson & { model: string }> => {
     const res = await fetch('/api/study/lesson', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -36,7 +36,7 @@ export function DetailedLessonView({ chapter, lang }: Props) {
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error ?? 'Erreur')
-    return data as DetailedLesson
+    return data as DetailedLesson & { model: string }
   }, [chapter.id])
 
   const loadLesson = useCallback(async (forceRegenerate: boolean) => {
@@ -53,7 +53,7 @@ export function DetailedLessonView({ chapter, lang }: Props) {
       }
       const fresh = await generateLesson()
       setLesson(fresh)
-      await saveLessonToCache(chapter.id, fresh)
+      await saveLessonToCache(chapter.id, fresh, fresh.model)
     } catch (e) {
       setError(getApiErrorMessage(e instanceof Error ? e.message : 'Erreur'))
     } finally {

@@ -37,9 +37,14 @@ export async function POST(req: Request) {
   try {
     // Génération structurée (sections/exemples/pièges), pas un problème de
     // raisonnement — voir ai-client.ts et ingest/route.ts pour la mesure.
-    const text = await callClaude({ model: 'claude-sonnet-5', prompt, maxTokens: 6000, effort: 'medium' })
+    const model = 'claude-sonnet-5'
+    const text = await callClaude({ model, prompt, maxTokens: 6000, effort: 'medium' })
     const lesson = extractJSON(text) as DetailedLesson
-    return Response.json(lesson)
+    // model voyage avec la leçon jusqu'au client, qui le repasse à
+    // saveLessonToCache — study_lessons_cache.model est not null (voir
+    // docs/db-anpassung.md §3) et rien d'autre ici ne connaît le modèle
+    // réellement utilisé pour cette génération.
+    return Response.json({ ...lesson, model })
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
     console.error('[study/lesson]', message)
