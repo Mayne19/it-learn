@@ -10,7 +10,7 @@ import { Alert, AlertDescription, AlertAction } from "@/components/ui/alert"
 import { Spinner } from "@/components/ui/spinner"
 import { ArrowLeft, ArrowRight, FileText, Sparkles, AlertCircle, CheckCircle2, BookOpen } from "lucide-react"
 import { getApiErrorMessage } from "@/lib/api-errors"
-import { getStudyCourse, listFiles, updateStudyCourseFileStatus, saveIngestResult, countStudyChapters } from "@/lib/study/queries"
+import { getStudyCourse, listFiles, updateStudyCourseFileStatus, saveIngestResult, countStudyChapters, advanceNextSliceIndex } from "@/lib/study/queries"
 import { listStudyChapters } from "@/lib/study/lesson-queries"
 import { PROFILE_UI } from "@/lib/study/profile-ui"
 import type { IngestResult } from "@/lib/study/ingest-prompt"
@@ -88,7 +88,14 @@ export default function EtudeCoursePage() {
       }
       const plan = planData as IngestPlan
 
-      for (let i = 0; i < plan.slices.length; i++) {
+      // "Réessayer" reprend à la tranche qui a échoué, pas à la première —
+      // sans ça, chaque nouvelle tentative retraitait (et repayait) les
+      // tranches déjà réussies. next_slice_index avance après chaque
+      // tranche traitée avec succès (voir advanceNextSliceIndex),
+      // remis à 0 par défaut pour tout nouveau fichier.
+      const startIndex = Math.min(file.next_slice_index, plan.slices.length)
+
+      for (let i = startIndex; i < plan.slices.length; i++) {
         const slice = plan.slices[i]
         setProgress({ current: i + 1, total: plan.slices.length })
 
@@ -109,6 +116,7 @@ export default function EtudeCoursePage() {
         const ingestResult = data as IngestResult
         const existingCount = await countStudyChapters(courseId)
         await saveIngestResult(courseId, file.id, ingestResult, existingCount)
+        await advanceNextSliceIndex(file.id, i)
 
         // Chaque tranche traitée est déjà sauvegardée en base — si une
         // tranche suivante échoue, les chapitres déjà générés restent

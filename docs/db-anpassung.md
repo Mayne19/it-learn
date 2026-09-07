@@ -98,10 +98,21 @@ create table if not exists public.study_course_files (
                      check (status in ('pending', 'processing', 'done', 'error')),
   error_message    text,
   uploaded_at      timestamptz not null default now(),
-  processed_at     timestamptz
+  processed_at     timestamptz,
+  -- Index de la prochaine tranche à traiter, 0-based — sur un cours
+  -- volumineux découpé en plusieurs tranches (voir lib/study/pdf-split.ts),
+  -- "Réessayer" repartait sans ça depuis la tranche 0 à chaque tentative,
+  -- retraitant (et repayant) les tranches déjà réussies. Avancé après
+  -- chaque tranche réussie (advanceNextSliceIndex) ; démarre à 0 pour tout
+  -- nouveau fichier (uploadFile insère toujours une nouvelle ligne).
+  next_slice_index integer not null default 0
 );
 
 alter table public.study_course_files enable row level security;
+
+-- Idempotent : ajoute la colonne si la table existait déjà avant ce champ.
+alter table public.study_course_files
+  add column if not exists next_slice_index integer not null default 0;
 
 drop policy if exists "study_course_files_user_own" on public.study_course_files;
 create policy "study_course_files_user_own"

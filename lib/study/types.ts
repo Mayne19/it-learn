@@ -25,6 +25,8 @@ export interface StudyCourseFile {
   error_message: string | null
   uploaded_at: string
   processed_at: string | null
+  /** Prochaine tranche à traiter (0-based) — voir docs/db-anpassung.md §3. */
+  next_slice_index: number
 }
 
 export interface StudyChapter {

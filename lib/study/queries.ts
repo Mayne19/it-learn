@@ -106,12 +106,32 @@ export async function updateStudyCourseFileStatus(
       // Sert à détecter côté UI un fichier resté bloqué en "processing"
       // (onglet fermé pendant l'ingestion, par ex.) — voir
       // PROCESSING_STUCK_AFTER_MS dans app/etude/[courseId]/page.tsx.
+      // Ne touche jamais next_slice_index ici : passer en "processing" est
+      // aussi ce que fait un "Réessayer" sur une tranche en échec — il ne
+      // faut pas reperdre la progression déjà acquise (voir
+      // advanceNextSliceIndex, qui l'avance après chaque tranche réussie).
       processed_at: new Date().toISOString(),
     })
     .eq("id", fileId)
 
   if (error) {
     throw new Error(`Impossible de mettre à jour le statut: ${error.message}`)
+  }
+}
+
+/**
+ * Avance la progression après une tranche traitée avec succès — "Réessayer"
+ * repart de cette tranche plutôt que de la première, évitant de retraiter
+ * (et repayer) les tranches déjà acquises. Voir docs/db-anpassung.md §3.
+ */
+export async function advanceNextSliceIndex(fileId: string, sliceIndex: number): Promise<void> {
+  const { error } = await getSupabaseClient()
+    .from("study_course_files")
+    .update({ next_slice_index: sliceIndex + 1 })
+    .eq("id", fileId)
+
+  if (error) {
+    throw new Error(`Impossible d'enregistrer la progression: ${error.message}`)
   }
 }
 
