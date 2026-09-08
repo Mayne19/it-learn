@@ -40,6 +40,7 @@ Règles :
 - Un concept de la liste = une section. Ne fusionne pas plusieurs concepts dans une seule section, et n'en oublie aucun.
 - ${chapter.has_code ? "Le champ \"example\" peut contenir du code court (5 lignes max) quand ça aide, sinon null." : "Le champ \"example\" ne doit JAMAIS contenir de code — ce chapitre n'en a pas. Utilise un exemple concret non technique, ou null si vraiment aucun exemple n'aide."}
 - Reste concret et pédagogique, pas juste une paraphrase de la définition.
+- N'ajoute AUCUN fait qui ne se déduit pas du résumé et des concepts ci-dessus (dates précises, noms d'organisations, numéros de norme, détails biographiques...) — un étudiant va réviser sur ce contenu, une information exacte mais non fournie par le cours source est quand même hors-sujet ici. Les exemples et analogies restent libres, ils n'ont pas besoin d'être factuels.
 
 Réponds UNIQUEMENT avec du JSON valide, sans markdown, sans backticks :
 {
