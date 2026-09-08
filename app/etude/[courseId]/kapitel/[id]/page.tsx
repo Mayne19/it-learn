@@ -50,6 +50,13 @@ export default function StudyChapterPage({
   // n'est pas conditionné par la sélection côté base-ui), ce qui
   // déclencherait un appel API par exercice au lieu d'un seul.
   const [visitedExercises, setVisitedExercises] = useState<Set<string>>(new Set())
+  // Signale l'avancement réel dans chaque phase — purement visuel (voir
+  // StudyPhase), remis à zéro à chaque montage donc pas persisté : rouvrir
+  // le chapitre plus tard montre à nouveau les trois phases "à faire",
+  // cohérent avec le fait que le cours/les cartes ne se rouvrent pas non
+  // plus automatiquement.
+  const [lessonOpened, setLessonOpened] = useState(false)
+  const [flashcardsDone, setFlashcardsDone] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -135,6 +142,7 @@ export default function StudyChapterPage({
         title="Comprendre"
         subtitle="Le contenu du chapitre, expliqué et approfondi"
         tone="ring"
+        done={lessonOpened}
       >
         {chapter.concepts.length > 0 && (
           <div className="rounded-lg border border-border/70 bg-card p-4">
@@ -143,14 +151,18 @@ export default function StudyChapterPage({
             </h3>
             <div className="flex flex-wrap gap-2">
               {chapter.concepts.map(c => (
-                <Badge key={c} variant="outline" className="text-xs border-ring/30 text-ring">
+                <Badge
+                  key={c}
+                  variant="outline"
+                  className="text-xs border-ring/30 text-ring transition-colors hover:bg-ring/10"
+                >
                   {c}
                 </Badge>
               ))}
             </div>
           </div>
         )}
-        <DetailedLessonView chapter={chapter} lang={lang} />
+        <DetailedLessonView chapter={chapter} lang={lang} onOpenChange={o => o && setLessonOpened(true)} />
         <WebEnrichmentView chapter={chapter} />
       </StudyPhase>
 
@@ -159,9 +171,10 @@ export default function StudyChapterPage({
         title="Mémoriser"
         subtitle="Cartes recto-verso, révisées par répétition espacée"
         tone="warning"
+        done={flashcardsDone}
       >
         <div className="rounded-lg border border-border/70 bg-card p-4">
-          <FlashcardReview chapter={chapter} />
+          <FlashcardReview chapter={chapter} onSeriesComplete={() => setFlashcardsDone(true)} />
         </div>
       </StudyPhase>
 
@@ -200,6 +213,7 @@ export default function StudyChapterPage({
             title="S'entraîner"
             subtitle={`${playableSlots.length} exercice${playableSlots.length > 1 ? "s" : ""} adapté${playableSlots.length > 1 ? "s" : ""} à ce chapitre`}
             tone="success"
+            done={visitedExercises.size > 0}
           >
             <Tabs
               value={activeExercise}
