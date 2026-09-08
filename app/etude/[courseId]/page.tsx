@@ -9,13 +9,14 @@ import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertAction } from "@/components/ui/alert"
 import { Spinner } from "@/components/ui/spinner"
 import { ArrowLeft, ArrowRight, FileText, Sparkles, AlertCircle, CheckCircle2, BookOpen } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { getApiErrorMessage } from "@/lib/api-errors"
 import { getStudyCourse, listFiles, updateStudyCourseFileStatus, saveIngestResult, countStudyChapters, advanceNextSliceIndex } from "@/lib/study/queries"
-import { listStudyChapters } from "@/lib/study/lesson-queries"
+import { listStudyChaptersWithProgress, type StudyChapterWithProgress } from "@/lib/study/lesson-queries"
 import { PROFILE_UI } from "@/lib/study/profile-ui"
 import type { IngestResult } from "@/lib/study/ingest-prompt"
 import type { IngestPlan } from "@/app/api/study/ingest/plan/route"
-import type { StudyCourse, StudyCourseFile, StudyChapter } from "@/lib/study/types"
+import type { StudyCourse, StudyCourseFile } from "@/lib/study/types"
 
 // Une ingestion normale (même multi-tranches sur un gros PDF) se termine en
 // quelques minutes. Au-delà, un fichier resté en "processing" est presque
@@ -37,7 +38,7 @@ export default function EtudeCoursePage() {
 
   const [course, setCourse] = useState<StudyCourse | null>(null)
   const [files, setFiles] = useState<StudyCourseFile[]>([])
-  const [chapters, setChapters] = useState<StudyChapter[]>([])
+  const [chapters, setChapters] = useState<StudyChapterWithProgress[]>([])
   const [loading, setLoading] = useState(true)
   const [processingFileId, setProcessingFileId] = useState<string | null>(null)
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null)
@@ -48,7 +49,7 @@ export default function EtudeCoursePage() {
       const [c, f, ch] = await Promise.all([
         getStudyCourse(courseId),
         listFiles(courseId),
-        listStudyChapters(courseId),
+        listStudyChaptersWithProgress(courseId),
       ])
       setCourse(c)
       setFiles(f)
@@ -174,6 +175,8 @@ export default function EtudeCoursePage() {
   }
 
   const pendingFiles = files.filter(f => f.status === "pending" || f.status === "error" || isStuckProcessing(f))
+  const masteredCount = chapters.filter(c => c.mastery_pct === 100).length
+  const dueCount = chapters.filter(c => c.next_review !== null && new Date(c.next_review) <= new Date()).length
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
@@ -266,32 +269,66 @@ export default function EtudeCoursePage() {
 
       {/* Chapitres générés */}
       {chapters.length > 0 ? (
-        <section className="space-y-2">
-          <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-            Chapitres
-          </p>
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              Chapitres
+            </p>
+            <p className="text-xs text-muted-foreground tabular-nums">
+              {masteredCount}/{chapters.length} maîtrisés
+              {dueCount > 0 && <span className="text-warning"> · {dueCount} à réviser</span>}
+            </p>
+          </div>
           <div className="space-y-2">
             {chapters
               .slice()
               .sort((a, b) => a.order - b.order)
-              .map(ch => (
-                <Link key={ch.id} href={`/etude/${courseId}/kapitel/${ch.id}`}>
-                  <Card className="border border-border/70 bg-card shadow-none transition-colors hover:border-ring/40 cursor-pointer">
-                    <CardContent className="flex items-center gap-3 p-4">
-                      <Badge variant="secondary" className="flex-shrink-0 text-xs tabular-nums">
-                        {ch.order}
-                      </Badge>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{ch.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {ch.concepts.slice(0, 3).join(" · ")}
-                        </p>
-                      </div>
-                      <ArrowRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
+              .map(ch => {
+                const isDue = ch.next_review !== null && new Date(ch.next_review) <= new Date()
+                const isMastered = ch.mastery_pct === 100
+                return (
+                  <Link key={ch.id} href={`/etude/${courseId}/kapitel/${ch.id}`}>
+                    <Card className="overflow-hidden border border-border/70 bg-card p-0 shadow-none transition-all hover:border-ring/40 hover:shadow-sm cursor-pointer">
+                      <CardContent className="flex items-stretch gap-0 p-0">
+                        {/* Bande d'état : lisible d'un coup d'œil sur une
+                            liste longue (58 chapitres sur un cours réel),
+                            là où un pourcentage seul se noie. */}
+                        <div
+                          className={cn(
+                            "w-1 flex-shrink-0",
+                            isDue ? "bg-warning" : isMastered ? "bg-success" : ch.mastery_pct > 0 ? "bg-ring" : "bg-border",
+                          )}
+                        />
+                        <div className="flex min-w-0 flex-1 items-center gap-3 px-3.5 py-3 sm:px-4">
+                          <Badge variant="secondary" className="flex-shrink-0 text-xs tabular-nums">
+                            {ch.order}
+                          </Badge>
+                          <div className="min-w-0 flex-1 space-y-1.5">
+                            <p className="truncate text-sm font-medium">{ch.title}</p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {ch.concepts.slice(0, 3).join(" · ")}
+                            </p>
+                            {ch.mastery_pct > 0 && (
+                              <div className="h-1 w-full max-w-40 overflow-hidden rounded-full bg-muted">
+                                <div
+                                  className={cn("h-full rounded-full", isMastered ? "bg-success" : "bg-ring")}
+                                  style={{ width: `${ch.mastery_pct}%` }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                          {isDue && (
+                            <Badge variant="outline" className="flex-shrink-0 border-warning/40 text-xs text-warning">
+                              À réviser
+                            </Badge>
+                          )}
+                          <ArrowRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                )
+              })}
           </div>
         </section>
       ) : pendingFiles.length === 0 ? (

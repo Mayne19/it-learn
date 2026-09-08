@@ -72,6 +72,34 @@ export async function listStudyChapters(studyCourseId: string): Promise<StudyCha
   return (data ?? []) as StudyChapter[]
 }
 
+/** Chapitre d'un cours avec sa progression — voir listStudyChaptersWithProgress. */
+export interface StudyChapterWithProgress extends StudyChapter {
+  mastery_pct: number
+  next_review: string | null
+}
+
+/**
+ * Les chapitres d'un cours avec leur maîtrise et leur prochaine échéance
+ * de révision — la page cours (app/etude/[courseId]) listait avant des
+ * lignes identiques via listStudyChapters, sans montrer lesquels sont
+ * acquis ni lesquels sont à revoir, alors que c'est l'écran où on choisit
+ * quoi travailler. Même vue que listAllStudyChaptersForUser, filtrée sur
+ * un seul cours (RLS s'applique de toute façon).
+ */
+export async function listStudyChaptersWithProgress(studyCourseId: string): Promise<StudyChapterWithProgress[]> {
+  const { data, error } = await getSupabaseClient()
+    .from("study_chapters_with_progress")
+    .select("*")
+    .eq("study_course_id", studyCourseId)
+    .order("order", { ascending: true })
+
+  if (error) {
+    throw new Error(`Impossible de charger les chapitres: ${error.message}`)
+  }
+
+  return (data ?? []) as StudyChapterWithProgress[]
+}
+
 /**
  * Tous les chapitres de tous les cours étude d'un utilisateur, avec le
  * titre du cours parent, la maîtrise (%) et la prochaine échéance de
