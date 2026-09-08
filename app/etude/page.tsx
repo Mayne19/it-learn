@@ -266,7 +266,12 @@ export default function EtudeDashboardPage() {
           dédiée aujourd'hui, les autres types n'ont qu'un badge sur la
           page chapitre. */}
       {priorityChapter && nextExerciseType && (
-        <Link href={`/etude/${priorityChapter.study_course_id}/kapitel/${priorityChapter.id}`}>
+        // mb-10 explicite en plus du space-y-10 du parent : le dégradé
+        // clair de cette carte contre le fond blanc de la page rendait
+        // l'espace réel (déjà là via space-y-10) peu perceptible à l'œil —
+        // l'écart doit être sans ambiguïté entre la recommandation et les
+        // stats qui suivent.
+        <Link href={`/etude/${priorityChapter.study_course_id}/kapitel/${priorityChapter.id}`} className="block mb-10">
           <Card className="group/reco relative overflow-hidden border border-ring/20 bg-gradient-to-br from-ring/10 via-ring/5 to-transparent shadow-none transition-all hover:border-ring/40 hover:shadow-md hover:shadow-ring/5 cursor-pointer">
             <CardContent className="flex items-center gap-3.5 p-4 sm:p-5">
               <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-ring/15 text-ring transition-transform group-hover/reco:scale-105 group-hover/reco:rotate-3">
@@ -325,6 +330,7 @@ export default function EtudeDashboardPage() {
             title="À réviser"
             icon={<Clock className="h-4 w-4 text-warning" />}
             count={dueChapters.length}
+            shown={Math.min(dueChapters.length, 5)}
             tone="warning"
           >
             {dueChapters.slice(0, 5).map(ch => (
@@ -338,6 +344,7 @@ export default function EtudeDashboardPage() {
             title="En cours"
             icon={<Zap className="h-4 w-4 text-ring" />}
             count={inProgress.length}
+            shown={Math.min(inProgress.length, 5)}
             tone="ring"
           >
             {inProgress.slice(0, 5).map(ch => (
@@ -351,6 +358,7 @@ export default function EtudeDashboardPage() {
             title="Pas encore explorés"
             icon={<AlertCircle className="h-4 w-4 text-muted-foreground" />}
             count={neverExplored.length}
+            shown={Math.min(neverExplored.length, 5)}
             tone="default"
           >
             {neverExplored.slice(0, 5).map(ch => (
@@ -427,12 +435,17 @@ function DashboardSection({
   title,
   icon,
   count,
+  shown,
   tone,
   children,
 }: {
   title: string
   icon: React.ReactNode
   count: number
+  /** Nombre réellement affiché dans `children` (slice(0, 5) côté appelant)
+   * — sans lui, le badge affichait le total (ex. 58) alors que seules 5
+   * cartes sont listées, ce qui semblait faux au premier coup d'œil. */
+  shown: number
   tone: "warning" | "ring" | "default"
   children: React.ReactNode
 }) {
@@ -448,7 +461,9 @@ function DashboardSection({
     <section className={cn("rounded-xl border p-4 sm:p-5", toneClasses[tone])}>
       <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
         {icon} {title}
-        <span className="font-mono text-xs font-normal tabular-nums text-muted-foreground/70">{count}</span>
+        <span className="font-mono text-xs font-normal tabular-nums text-muted-foreground/70">
+          {shown < count ? `${shown}/${count}` : count}
+        </span>
       </h2>
       <div className="space-y-3">{children}</div>
     </section>
