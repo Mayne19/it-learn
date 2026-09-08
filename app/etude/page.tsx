@@ -236,7 +236,7 @@ export default function EtudeDashboardPage() {
   }
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+    <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 space-y-10">
       <MilestoneCelebration milestone={celebratingMilestone} onClose={closeCelebration} />
 
       {/* Header with streak & progress */}
@@ -267,18 +267,19 @@ export default function EtudeDashboardPage() {
           page chapitre. */}
       {priorityChapter && nextExerciseType && (
         <Link href={`/etude/${priorityChapter.study_course_id}/kapitel/${priorityChapter.id}`}>
-          <Card className="border border-ring/25 bg-ring/5 shadow-none transition-colors hover:border-ring/45 hover:bg-ring/10 cursor-pointer">
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-ring/15 text-ring">
-                <Sparkles className="h-4 w-4" />
+          <Card className="group/reco relative overflow-hidden border border-ring/20 bg-gradient-to-br from-ring/10 via-ring/5 to-transparent shadow-none transition-all hover:border-ring/40 hover:shadow-md hover:shadow-ring/5 cursor-pointer">
+            <CardContent className="flex items-center gap-3.5 p-4 sm:p-5">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-ring/15 text-ring transition-transform group-hover/reco:scale-105 group-hover/reco:rotate-3">
+                <Sparkles className="h-4.5 w-4.5" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">
-                  Recommandé : {EXERCISE_LABELS[nextExerciseType]} sur <span className="truncate">{priorityChapter.title}</span>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-ring/80">Recommandé pour toi</p>
+                <p className="text-sm font-medium mt-0.5">
+                  {EXERCISE_LABELS[nextExerciseType]} sur <span className="truncate">{priorityChapter.title}</span>
                 </p>
                 <p className="text-xs text-muted-foreground truncate">{priorityChapter.course_title}</p>
               </div>
-              <ArrowRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+              <ArrowRight className="h-4 w-4 flex-shrink-0 text-muted-foreground transition-transform group-hover/reco:translate-x-0.5" />
             </CardContent>
           </Card>
         </Link>
@@ -315,40 +316,48 @@ export default function EtudeDashboardPage() {
       {/* Chaque section vit dans son propre bloc (fond + bordure) plutôt
           qu'un simple titre suivi de cartes à même la page — sans ça, rien
           ne distingue visuellement où une catégorie finit et où la
-          suivante commence, seul l'espacement du parent les séparait. */}
+          suivante commence, seul l'espacement du parent les séparait.
+          Entrée échelonnée (delay croissant) plutôt que tout d'un coup —
+          guide l'œil dans l'ordre de priorité réel des sections. */}
       <div className="space-y-6">
-        <DashboardSection
-          title="À réviser"
-          icon={<Clock className="h-4 w-4 text-warning" />}
-          count={dueChapters.length}
-          tone="warning"
-        >
-          {dueChapters.slice(0, 5).map(ch => (
-            <ChapterCard key={ch.id} chapter={ch} showDue />
-          ))}
-        </DashboardSection>
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <DashboardSection
+            title="À réviser"
+            icon={<Clock className="h-4 w-4 text-warning" />}
+            count={dueChapters.length}
+            tone="warning"
+          >
+            {dueChapters.slice(0, 5).map(ch => (
+              <ChapterCard key={ch.id} chapter={ch} showDue />
+            ))}
+          </DashboardSection>
+        </div>
 
-        <DashboardSection
-          title="En cours"
-          icon={<Zap className="h-4 w-4 text-ring" />}
-          count={inProgress.length}
-          tone="ring"
-        >
-          {inProgress.slice(0, 5).map(ch => (
-            <ChapterCard key={ch.id} chapter={ch} />
-          ))}
-        </DashboardSection>
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 [animation-delay:75ms] fill-mode-both">
+          <DashboardSection
+            title="En cours"
+            icon={<Zap className="h-4 w-4 text-ring" />}
+            count={inProgress.length}
+            tone="ring"
+          >
+            {inProgress.slice(0, 5).map(ch => (
+              <ChapterCard key={ch.id} chapter={ch} />
+            ))}
+          </DashboardSection>
+        </div>
 
-        <DashboardSection
-          title="Pas encore explorés"
-          icon={<AlertCircle className="h-4 w-4 text-muted-foreground" />}
-          count={neverExplored.length}
-          tone="default"
-        >
-          {neverExplored.slice(0, 5).map(ch => (
-            <ChapterCard key={ch.id} chapter={ch} showNew />
-          ))}
-        </DashboardSection>
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 [animation-delay:150ms] fill-mode-both">
+          <DashboardSection
+            title="Pas encore explorés"
+            icon={<AlertCircle className="h-4 w-4 text-muted-foreground" />}
+            count={neverExplored.length}
+            tone="default"
+          >
+            {neverExplored.slice(0, 5).map(ch => (
+              <ChapterCard key={ch.id} chapter={ch} showNew />
+            ))}
+          </DashboardSection>
+        </div>
       </div>
 
       {/* Course summaries */}
@@ -390,14 +399,17 @@ function StatCard({ icon, label, value, tone }: {
     warning: "bg-warning/10",
   }
   return (
-    <Card className={cn("border border-border/50 shadow-none", bg[tone])}>
-      <CardContent className="flex items-center gap-3 p-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-background/80">
+    <Card className={cn(
+      "border border-border/50 shadow-none transition-all hover:-translate-y-0.5 hover:shadow-sm",
+      bg[tone],
+    )}>
+      <CardContent className="flex items-center gap-3 p-3.5">
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-background/80">
           {icon}
         </div>
-        <div>
-          <p className="text-xl font-bold leading-tight">{value}</p>
-          <p className="text-xs text-muted-foreground">{label}</p>
+        <div className="min-w-0">
+          <p className="text-2xl font-bold leading-tight tabular-nums">{value}</p>
+          <p className="text-xs text-muted-foreground truncate">{label}</p>
         </div>
       </CardContent>
     </Card>
