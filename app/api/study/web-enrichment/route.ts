@@ -20,10 +20,11 @@ export async function POST(req: Request) {
 
   const supabase = await getSupabaseServerClient()
   try {
-    // 'heavy' comme l'ingestion/le cours détaillé : web_search facture par
-    // recherche ($0.01/recherche, voir docs/etude-ai-architecture.md) en
-    // plus des tokens — pas un appel "light" comme flashcards/speed-round.
-    await checkAndConsumeAiQuota(supabase, 'heavy')
+    // 'websearch', pas 'heavy' : web_search facture $0.01/recherche EN
+    // PLUS des tokens (jusqu'à 4/appel, voir max_uses plus bas) — la
+    // limite "heavy" (20/h, pensée pour un simple appel Sonnet) autoriserait
+    // jusqu'à 80 recherches/heure, un ordre de grandeur de coût différent.
+    await checkAndConsumeAiQuota(supabase, 'websearch')
   } catch (e) {
     if (e instanceof RateLimitError) return Response.json({ error: e.message }, { status: 429 })
     throw e
@@ -120,5 +121,27 @@ export async function POST(req: Request) {
     )
   }
 
-  return Response.json({ ...result, model })
+  // Le prompt demande de ne jamais inventer d'URL, mais rien ne le
+  // garantit — une URL mal formée ou hallucinée s'afficherait sinon comme
+  // lien cliquable "source fiable" sans qu'on ait pu la détecter avant.
+  // On ne filtre que la forme (http(s) valide), pas l'existence réelle de
+  // la page — vérifier ça demanderait une requête réseau supplémentaire.
+  const validSources = result.sources.filter(s => {
+    try {
+      const parsed = new URL(s.url)
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+    } catch {
+      return false
+    }
+  })
+
+  if (validSources.length === 0) {
+    console.error('[study/web-enrichment] toutes les sources avaient une URL invalide', { chapterId, raw: result.sources })
+    return Response.json(
+      { error: "Les sources trouvées avaient un format invalide. Réessaie, ou signale ce cas." },
+      { status: 500 }
+    )
+  }
+
+  return Response.json({ sources: validSources, model })
 }

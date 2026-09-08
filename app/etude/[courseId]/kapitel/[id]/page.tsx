@@ -177,7 +177,14 @@ export default function StudyChapterPage({
                 ))}
               </TabsList>
               {playableSlots.map(slot => (
-                <TabsContent key={slot.type} value={slot.type} className="pt-4">
+                // keepMounted : sans lui, changer d'onglet démonte le
+                // panneau caché (comportement par défaut de base-ui) et
+                // fait perdre l'exercice en cours — un aller-retour entre
+                // deux onglets régénérait un nouveau défi à chaque fois,
+                // avec un appel API inutile. Le premier montage reste
+                // paresseux (déclenché seulement à l'ouverture), seul le
+                // démontage ultérieur est évité.
+                <TabsContent key={slot.type} value={slot.type} keepMounted className="pt-4">
                   {slot.type === "speedRound" && <SpeedRound chapter={chapter} lang={lang} />}
                   {slot.type === "matching" && <MemoryMatch chapter={chapter} />}
                   {slot.type === "bugHunt" && <BugHunt chapter={chapter} />}

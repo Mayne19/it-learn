@@ -10,16 +10,21 @@ import type { SupabaseClient } from "@supabase/supabase-js"
  * concurrentes — un simple select-puis-insert côté application serait
  * contournable par deux requêtes simultanées).
  *
- * Deux catégories, pas une limite unique : "heavy" (Sonnet, ingest/lesson,
+ * Trois catégories, pas une limite unique : "heavy" (Sonnet, ingest/lesson,
  * coût nettement plus élevé par appel) reste restrictif ; "light" (Haiku,
  * flashcards/speed-round/ingest-plan) reste généreux pour ne pas gêner un
- * usage normal (plusieurs Speed Rounds d'affilée, par exemple).
+ * usage normal (plusieurs Speed Rounds d'affilée, par exemple) ;
+ * "websearch" (web-enrichment) a sa propre limite, plus stricte que
+ * "heavy" — web_search facture $0.01/recherche EN PLUS des tokens
+ * (jusqu'à 4 recherches/appel, voir web-enrichment/route.ts), un simple
+ * appel Sonnet classé "heavy" ne coûte jamais ça pour rien.
  */
-export type AiUsageCategory = "heavy" | "light"
+export type AiUsageCategory = "heavy" | "light" | "websearch"
 
 const LIMITS: Record<AiUsageCategory, number> = {
   heavy: 20,
   light: 60,
+  websearch: 8,
 }
 
 export class RateLimitError extends Error {

@@ -67,6 +67,12 @@ export function buildExamSchedule(
   return schedule
 }
 
+// toISOString() convertirait toujours en UTC — un utilisateur à l'ouest
+// de UTC pourrait voir le premier jour du planning daté de la veille par
+// rapport à sa date locale réelle. On formate la date locale directement.
 function toISODate(d: Date): string {
-  return d.toISOString().slice(0, 10)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
 }

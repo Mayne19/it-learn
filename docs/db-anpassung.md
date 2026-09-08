@@ -409,7 +409,7 @@ group by c.id;
 
 RLS hérité automatiquement de `study_chapters` — pas de policy à ajouter sur la vue.
 
-**Code à mettre à jour plus tard** (pas fait ici) : `lib/study/lesson-queries.ts` → lire `study_chapters_with_progress` au lieu de `study_chapters` dans `listAllStudyChaptersForUser`.
+**Fait** : `lib/study/lesson-queries.ts::listAllStudyChaptersForUser` lit bien `study_chapters_with_progress`.
 
 ## 4bis. Corrections Security Advisor
 
