@@ -30,7 +30,12 @@ export function FlashcardReview({ chapter }: Props) {
   const [cards, setCards] = useState<Flashcard[]>([])
   const [index, setIndex] = useState(0)
   const [flipped, setFlipped] = useState(false)
-  const [loading, setLoading] = useState(true)
+  // Démarre à false : la génération n'est plus automatique au montage —
+  // un chapitre simplement survolé déclenchait sinon un appel Haiku
+  // payant sans que l'utilisateur ait rien demandé, contrairement à
+  // DetailedLessonView et WebEnrichmentView qui attendent une action.
+  const [started, setStarted] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [streak, setStreak] = useState(0)
 
@@ -67,8 +72,9 @@ export function FlashcardReview({ chapter }: Props) {
   }, [])
 
   useEffect(() => {
+    if (!started) return
     Promise.resolve().then(() => loadCards())
-  }, [loadCards])
+  }, [started, loadCards])
 
   async function handleGrade(grade: FlashcardGrade) {
     const card = cards[index]
@@ -93,6 +99,19 @@ export function FlashcardReview({ chapter }: Props) {
 
     setFlipped(false)
     setIndex(i => i + 1)
+  }
+
+  if (!started) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-6 text-center">
+        <p className="max-w-sm text-sm text-muted-foreground">
+          Des cartes recto-verso générées depuis ce chapitre, avec répétition espacée : les cartes ratées reviennent plus vite.
+        </p>
+        <Button size="sm" className="gap-2" onClick={() => setStarted(true)}>
+          <Sparkles className="h-4 w-4" /> Commencer la Lernkartei
+        </Button>
+      </div>
+    )
   }
 
   if (loading) {

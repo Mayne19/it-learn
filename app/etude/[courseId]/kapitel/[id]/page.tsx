@@ -25,6 +25,7 @@ import { ConceptMap } from "@/components/study/exercises/concept-map"
 import { FillBlank } from "@/components/study/exercises/fill-blank"
 import { CodeComplete } from "@/components/study/exercises/code-complete"
 import { WebEnrichmentView } from "@/components/study/web-enrichment-view"
+import { StudyPhase } from "@/components/study/study-phase"
 import { getExerciseSlots } from "@/lib/study/exercise-strategy"
 import type { StudyChapter } from "@/lib/study/types"
 import type { Lang } from "@/lib/chapters/types"
@@ -91,50 +92,67 @@ export default function StudyChapterPage({
   const courseTitle = chapter.course_title
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link href="/etude" className="hover:text-foreground transition-colors">Étude</Link>
-        <span>/</span>
-        <Link href={`/etude/${chapter.study_course_id}`} className="hover:text-foreground transition-colors">
-          {courseTitle}
-        </Link>
-        <span>/</span>
-        <span className="text-foreground">Chapitre {positionInCourse}</span>
-      </nav>
+    <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 space-y-10">
+      {/* Breadcrumb + titre : un seul groupe visuel, séparé des phases
+          par l'espacement du parent. */}
+      <div className="space-y-4">
+        <nav className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Link href="/etude" className="hover:text-foreground transition-colors">Étude</Link>
+          <span>/</span>
+          <Link href={`/etude/${chapter.study_course_id}`} className="hover:text-foreground transition-colors">
+            {courseTitle}
+          </Link>
+          <span>/</span>
+          <span className="text-foreground">Chapitre {positionInCourse}</span>
+        </nav>
 
-      {/* Header */}
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary" className="text-xs">{profileLabel}</Badge>
-          <Badge variant="outline" className="text-xs">Chapitre {positionInCourse}/{totalChapters}</Badge>
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary" className="text-xs">{profileLabel}</Badge>
+            <Badge variant="outline" className="text-xs">Chapitre {positionInCourse}/{totalChapters}</Badge>
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-balance">{chapter.title}</h1>
         </div>
-        <h1 className="text-3xl font-bold tracking-tight">{chapter.title}</h1>
       </div>
 
-      {/* Concepts */}
-      {chapter.concepts.length > 0 && (
-        <div className="rounded-lg border border-border/70 bg-card p-4">
-          <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
-            <Lightbulb className="h-4 w-4" /> Concepts
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {chapter.concepts.map(c => (
-              <Badge key={c} variant="outline" className="text-xs border-ring/30 text-ring">
-                {c}
-              </Badge>
-            ))}
+      {/* Trois phases plutôt qu'une pile plate de blocs : l'étudiant qui
+          arrive sur un chapitre voit dans quel ordre travailler
+          (comprendre le contenu, puis le mémoriser, puis se tester)
+          au lieu de quatre sections de même poids visuel. */}
+      <StudyPhase
+        step={1}
+        title="Comprendre"
+        subtitle="Le contenu du chapitre, expliqué et approfondi"
+        tone="ring"
+      >
+        {chapter.concepts.length > 0 && (
+          <div className="rounded-lg border border-border/70 bg-card p-4">
+            <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+              <Lightbulb className="h-4 w-4" /> Concepts couverts
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {chapter.concepts.map(c => (
+                <Badge key={c} variant="outline" className="text-xs border-ring/30 text-ring">
+                  {c}
+                </Badge>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Cours et flashcards restent toujours visibles — ce sont les
-          contenus d'apprentissage, pas des jeux à choisir. */}
-      <div className="space-y-4">
+        )}
         <DetailedLessonView chapter={chapter} lang={lang} />
         <WebEnrichmentView chapter={chapter} />
-        <FlashcardReview chapter={chapter} />
-      </div>
+      </StudyPhase>
+
+      <StudyPhase
+        step={2}
+        title="Mémoriser"
+        subtitle="Cartes recto-verso, révisées par répétition espacée"
+        tone="warning"
+      >
+        <div className="rounded-lg border border-border/70 bg-card p-4">
+          <FlashcardReview chapter={chapter} />
+        </div>
+      </StudyPhase>
 
       {/* Sélecteur d'exercice — jusqu'à 6 jeux possibles par chapitre
           (voir exercise-strategy.ts), tout empiler forçait un défilement
@@ -166,8 +184,12 @@ export default function StudyChapterPage({
         }
 
         return (
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold text-muted-foreground">Exercices</h2>
+          <StudyPhase
+            step={3}
+            title="S'entraîner"
+            subtitle={`${playableSlots.length} exercice${playableSlots.length > 1 ? "s" : ""} adapté${playableSlots.length > 1 ? "s" : ""} à ce chapitre`}
+            tone="success"
+          >
             <Tabs defaultValue={playableSlots[0].type}>
               <TabsList className="h-auto flex-wrap justify-start gap-1 bg-muted/50 p-1">
                 {playableSlots.map(slot => (
@@ -194,7 +216,7 @@ export default function StudyChapterPage({
                 </TabsContent>
               ))}
             </Tabs>
-          </div>
+          </StudyPhase>
         )
       })()}
 
