@@ -312,47 +312,44 @@ export default function EtudeDashboardPage() {
         />
       </div>
 
-      {/* Due cards — priority */}
-      {dueChapters.length > 0 && (
-        <section>
-          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            <Clock className="h-5 w-5 text-warning" /> À réviser
-          </h2>
-          <div className="space-y-2">
-            {dueChapters.slice(0, 5).map(ch => (
-              <ChapterCard key={ch.id} chapter={ch} showDue />
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Chaque section vit dans son propre bloc (fond + bordure) plutôt
+          qu'un simple titre suivi de cartes à même la page — sans ça, rien
+          ne distingue visuellement où une catégorie finit et où la
+          suivante commence, seul l'espacement du parent les séparait. */}
+      <div className="space-y-6">
+        <DashboardSection
+          title="À réviser"
+          icon={<Clock className="h-4 w-4 text-warning" />}
+          count={dueChapters.length}
+          tone="warning"
+        >
+          {dueChapters.slice(0, 5).map(ch => (
+            <ChapterCard key={ch.id} chapter={ch} showDue />
+          ))}
+        </DashboardSection>
 
-      {/* In progress */}
-      {inProgress.length > 0 && (
-        <section>
-          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            <Zap className="h-5 w-5 text-ring" /> En cours
-          </h2>
-          <div className="space-y-2">
-            {inProgress.slice(0, 5).map(ch => (
-              <ChapterCard key={ch.id} chapter={ch} />
-            ))}
-          </div>
-        </section>
-      )}
+        <DashboardSection
+          title="En cours"
+          icon={<Zap className="h-4 w-4 text-ring" />}
+          count={inProgress.length}
+          tone="ring"
+        >
+          {inProgress.slice(0, 5).map(ch => (
+            <ChapterCard key={ch.id} chapter={ch} />
+          ))}
+        </DashboardSection>
 
-      {/* Never explored */}
-      {neverExplored.length > 0 && (
-        <section>
-          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-muted-foreground" /> Pas encore explorés
-          </h2>
-          <div className="space-y-2">
-            {neverExplored.slice(0, 5).map(ch => (
-              <ChapterCard key={ch.id} chapter={ch} showNew />
-            ))}
-          </div>
-        </section>
-      )}
+        <DashboardSection
+          title="Pas encore explorés"
+          icon={<AlertCircle className="h-4 w-4 text-muted-foreground" />}
+          count={neverExplored.length}
+          tone="default"
+        >
+          {neverExplored.slice(0, 5).map(ch => (
+            <ChapterCard key={ch.id} chapter={ch} showNew />
+          ))}
+        </DashboardSection>
+      </div>
 
       {/* Course summaries */}
       {courseSummaries.length > 0 && (
@@ -407,6 +404,45 @@ function StatCard({ icon, label, value, tone }: {
   )
 }
 
+/**
+ * Regroupe une catégorie de chapitres (À réviser / En cours / Pas encore
+ * explorés) dans un bloc visuellement distinct — fond + bordure teintés
+ * selon `tone` — plutôt qu'un simple titre suivi de cartes à même la
+ * page : sans conteneur propre, rien ne marque où une section finit et
+ * où la suivante commence. N'affiche rien si la catégorie est vide.
+ */
+function DashboardSection({
+  title,
+  icon,
+  count,
+  tone,
+  children,
+}: {
+  title: string
+  icon: React.ReactNode
+  count: number
+  tone: "warning" | "ring" | "default"
+  children: React.ReactNode
+}) {
+  if (count === 0) return null
+
+  const toneClasses: Record<typeof tone, string> = {
+    warning: "border-warning/20 bg-warning/[0.03]",
+    ring: "border-ring/20 bg-ring/[0.03]",
+    default: "border-border/60 bg-muted/10",
+  }
+
+  return (
+    <section className={cn("rounded-xl border p-4 sm:p-5", toneClasses[tone])}>
+      <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        {icon} {title}
+        <span className="font-mono text-xs font-normal tabular-nums text-muted-foreground/70">{count}</span>
+      </h2>
+      <div className="space-y-3">{children}</div>
+    </section>
+  )
+}
+
 function ChapterCard({
   chapter,
   showDue,
@@ -418,28 +454,33 @@ function ChapterCard({
 }) {
   return (
     <Link href={`/etude/${chapter.study_course_id}/kapitel/${chapter.id}`}>
-      <Card className={cn(
-        "border border-border/70 bg-card shadow-none transition-all hover:border-ring/40 cursor-pointer",
-        showDue && "border-warning/30 bg-warning/5",
-      )}>
-        <CardContent className="flex items-center justify-between gap-3 p-3 sm:p-4">
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold truncate">{chapter.title}</p>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">
-              {chapter.course_title} · Maîtrise {chapter.mastery_pct}%
-            </p>
-          </div>
-          <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            {showDue && (
-              <Badge variant="outline" className="text-xs border-warning/40 text-warning">
-                À réviser
-              </Badge>
-            )}
-            {showNew && (
-              <Badge variant="outline" className="text-xs border-ring/40 text-ring">
-                Nouveau
-              </Badge>
-            )}
+      <Card className="overflow-hidden border border-border/70 bg-card shadow-none transition-all hover:border-ring/40 hover:shadow-sm cursor-pointer p-0">
+        <CardContent className="flex items-stretch gap-0 p-0">
+          {/* Bande de catégorie — encode l'état d'un coup d'œil, avant
+              même de lire le badge texte. */}
+          <div className={cn(
+            "w-1 flex-shrink-0",
+            showDue ? "bg-warning" : showNew ? "bg-ring" : "bg-border",
+          )} />
+          <div className="flex min-w-0 flex-1 items-center justify-between gap-3 px-3.5 py-3 sm:px-4">
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold truncate">{chapter.title}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                {chapter.course_title} · Maîtrise {chapter.mastery_pct}%
+              </p>
+            </div>
+            <div className="flex flex-shrink-0 items-center gap-2">
+              {showDue && (
+                <Badge variant="outline" className="text-xs border-warning/40 text-warning">
+                  À réviser
+                </Badge>
+              )}
+              {showNew && (
+                <Badge variant="outline" className="text-xs border-ring/40 text-ring">
+                  Nouveau
+                </Badge>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
