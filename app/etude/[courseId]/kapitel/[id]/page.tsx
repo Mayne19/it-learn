@@ -13,6 +13,7 @@ import {
   Network,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { getApiErrorMessage } from "@/lib/api-errors"
 import { listStudyChapters, getStudyChapter, type StudyChapterWithCourseTitle } from "@/lib/study/lesson-queries"
 import { DetailedLessonView } from "@/components/study/detailed-lesson-view"
@@ -126,45 +127,67 @@ export default function StudyChapterPage({
         </div>
       )}
 
-      {/* Exercise mix overview — n'affiche que les types réellement
-          jouables (composant branché plus bas). mcq/trueFalse/codeAnalysis
-          existent dans exercise-strategy.ts (pondération pour
-          pickNextExercise) mais n'ont pas d'UI dédiée : un badge affiché
-          ici sans rien de cliquable derrière serait trompeur. */}
-      {(() => {
-        const playableSlots = exerciseSlots.filter(s => s.type !== "mcq" && s.type !== "trueFalse" && s.type !== "codeAnalysis")
-        if (playableSlots.length === 0) return null
-        return (
-          <div className="rounded-lg border border-border/50 bg-muted/25 p-4">
-            <h2 className="text-sm font-semibold text-muted-foreground mb-2">Exercices disponibles</h2>
-            <div className="flex flex-wrap gap-2">
-              {playableSlots.map(slot => (
-                <Badge key={slot.type} variant="secondary" className="text-xs">
-                  {slot.type === "speedRound" && <Zap className="mr-1 h-3 w-3" />}
-                  {slot.type === "code" && <Code2 className="mr-1 h-3 w-3" />}
-                  {slot.type === "bugHunt" && <Bug className="mr-1 h-3 w-3" />}
-                  {slot.type === "fillBlank" && <PenLine className="mr-1 h-3 w-3" />}
-                  {slot.type === "matching" && <Link2 className="mr-1 h-3 w-3" />}
-                  {slot.type === "conceptMap" && <Network className="mr-1 h-3 w-3" />}
-                  {slot.type === "speedRound" ? "Speed Round" : slot.type}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )
-      })()}
-
-      {/* Main sections */}
+      {/* Cours et flashcards restent toujours visibles — ce sont les
+          contenus d'apprentissage, pas des jeux à choisir. */}
       <div className="space-y-4">
         <DetailedLessonView chapter={chapter} lang={lang} />
         <FlashcardReview chapter={chapter} />
-        <SpeedRound chapter={chapter} lang={lang} />
-        {exerciseSlots.some(s => s.type === "matching") && <MemoryMatch chapter={chapter} />}
-        {exerciseSlots.some(s => s.type === "bugHunt") && <BugHunt chapter={chapter} />}
-        {exerciseSlots.some(s => s.type === "conceptMap") && <ConceptMap chapter={chapter} />}
-        {exerciseSlots.some(s => s.type === "fillBlank") && <FillBlank chapter={chapter} />}
-        {exerciseSlots.some(s => s.type === "code") && <CodeComplete chapter={chapter} />}
       </div>
+
+      {/* Sélecteur d'exercice — jusqu'à 6 jeux possibles par chapitre
+          (voir exercise-strategy.ts), tout empiler forçait un défilement
+          interminable sans indiquer où commencer. Un seul jeu affiché à la
+          fois, choisi explicitement, plutôt qu'un mur de composants.
+          mcq/trueFalse/codeAnalysis existent dans exercise-strategy.ts
+          (pondération pour pickNextExercise) mais n'ont pas d'UI dédiée —
+          exclus de la liste, un onglet qui ne mène à rien serait trompeur. */}
+      {(() => {
+        const playableTypes = ["speedRound", "matching", "bugHunt", "conceptMap", "fillBlank", "code"] as const
+        const playableSlots = exerciseSlots.filter(s => (playableTypes as readonly string[]).includes(s.type))
+        if (playableSlots.length === 0) return null
+
+        const ICONS: Record<string, React.ReactNode> = {
+          speedRound: <Zap className="h-3.5 w-3.5" />,
+          matching: <Link2 className="h-3.5 w-3.5" />,
+          bugHunt: <Bug className="h-3.5 w-3.5" />,
+          conceptMap: <Network className="h-3.5 w-3.5" />,
+          fillBlank: <PenLine className="h-3.5 w-3.5" />,
+          code: <Code2 className="h-3.5 w-3.5" />,
+        }
+        const LABELS: Record<string, string> = {
+          speedRound: "Speed Round",
+          matching: "Memory",
+          bugHunt: "Bug Hunt",
+          conceptMap: "Carte",
+          fillBlank: "Texte à trous",
+          code: "Complète",
+        }
+
+        return (
+          <div className="space-y-3">
+            <h2 className="text-sm font-semibold text-muted-foreground">Exercices</h2>
+            <Tabs defaultValue={playableSlots[0].type}>
+              <TabsList className="h-auto flex-wrap justify-start gap-1 bg-muted/50 p-1">
+                {playableSlots.map(slot => (
+                  <TabsTrigger key={slot.type} value={slot.type} className="gap-1.5 px-2.5 py-1.5">
+                    {ICONS[slot.type]} {LABELS[slot.type]}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {playableSlots.map(slot => (
+                <TabsContent key={slot.type} value={slot.type} className="pt-4">
+                  {slot.type === "speedRound" && <SpeedRound chapter={chapter} lang={lang} />}
+                  {slot.type === "matching" && <MemoryMatch chapter={chapter} />}
+                  {slot.type === "bugHunt" && <BugHunt chapter={chapter} />}
+                  {slot.type === "conceptMap" && <ConceptMap chapter={chapter} />}
+                  {slot.type === "fillBlank" && <FillBlank chapter={chapter} />}
+                  {slot.type === "code" && <CodeComplete chapter={chapter} />}
+                </TabsContent>
+              ))}
+            </Tabs>
+          </div>
+        )
+      })()}
 
       {/* Navigation between chapters */}
       {totalChapters > 1 && (
