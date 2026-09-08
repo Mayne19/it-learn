@@ -39,6 +39,17 @@ export default function StudyChapterPage({
   const [allChapters, setAllChapters] = useState<StudyChapter[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  // null tant qu'aucun exercice n'est choisi — sans ça, defaultValue sur
+  // <Tabs> montait Speed Round dès l'affichage de la phase 3, avant même
+  // que l'étudiant ait fini de lire le cours, déclenchant un appel Haiku
+  // sans action de sa part.
+  const [activeExercise, setActiveExercise] = useState<string | null>(null)
+  // Un onglet une fois ouvert reste dans cet ensemble pour garder
+  // keepMounted actif seulement sur lui — passer keepMounted en dur sur
+  // TOUS les TabsContent les monterait tous dès le rendu (keepMounted
+  // n'est pas conditionné par la sélection côté base-ui), ce qui
+  // déclencherait un appel API par exercice au lieu d'un seul.
+  const [visitedExercises, setVisitedExercises] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     let cancelled = false
@@ -190,7 +201,14 @@ export default function StudyChapterPage({
             subtitle={`${playableSlots.length} exercice${playableSlots.length > 1 ? "s" : ""} adapté${playableSlots.length > 1 ? "s" : ""} à ce chapitre`}
             tone="success"
           >
-            <Tabs defaultValue={playableSlots[0].type}>
+            <Tabs
+              value={activeExercise}
+              onValueChange={v => {
+                const next = v as string
+                setActiveExercise(next)
+                setVisitedExercises(prev => prev.has(next) ? prev : new Set(prev).add(next))
+              }}
+            >
               <TabsList className="h-auto flex-wrap justify-start gap-1 bg-muted/50 p-1">
                 {playableSlots.map(slot => (
                   <TabsTrigger key={slot.type} value={slot.type} className="gap-1.5 px-2.5 py-1.5">
@@ -198,15 +216,26 @@ export default function StudyChapterPage({
                   </TabsTrigger>
                 ))}
               </TabsList>
+              {activeExercise === null && (
+                <p className="pt-4 text-sm text-muted-foreground">
+                  Choisis un exercice ci-dessus pour t&apos;entraîner.
+                </p>
+              )}
               {playableSlots.map(slot => (
-                // keepMounted : sans lui, changer d'onglet démonte le
-                // panneau caché (comportement par défaut de base-ui) et
-                // fait perdre l'exercice en cours — un aller-retour entre
-                // deux onglets régénérait un nouveau défi à chaque fois,
-                // avec un appel API inutile. Le premier montage reste
-                // paresseux (déclenché seulement à l'ouverture), seul le
-                // démontage ultérieur est évité.
-                <TabsContent key={slot.type} value={slot.type} keepMounted className="pt-4">
+                // keepMounted seulement une fois l'onglet visité : sans
+                // ça, quitter un exercice en cours le démonterait
+                // (comportement par défaut de base-ui) et régénérerait un
+                // nouveau défi à chaque retour, avec un appel API inutile.
+                // keepMounted=true en dur monterait les 6 exercices dès le
+                // rendu de la phase, avant même le premier clic — d'où le
+                // conditionnement sur visitedExercises plutôt qu'une prop
+                // fixe.
+                <TabsContent
+                  key={slot.type}
+                  value={slot.type}
+                  keepMounted={visitedExercises.has(slot.type)}
+                  className="pt-4"
+                >
                   {slot.type === "speedRound" && <SpeedRound chapter={chapter} lang={lang} />}
                   {slot.type === "matching" && <MemoryMatch chapter={chapter} />}
                   {slot.type === "bugHunt" && <BugHunt chapter={chapter} />}
