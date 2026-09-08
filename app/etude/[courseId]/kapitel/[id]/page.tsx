@@ -9,10 +9,7 @@ import {
   Code2,
   Bug,
   PenLine,
-  ListChecks,
-  Search,
   Link2,
-  CheckCircle2,
   Network,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -129,26 +126,33 @@ export default function StudyChapterPage({
         </div>
       )}
 
-      {/* Exercise mix overview */}
-      <div className="rounded-lg border border-border/50 bg-muted/25 p-4">
-        <h2 className="text-sm font-semibold text-muted-foreground mb-2">Exercices disponibles</h2>
-        <div className="flex flex-wrap gap-2">
-          {exerciseSlots.map(slot => (
-            <Badge key={slot.type} variant="secondary" className="text-xs">
-              {slot.type === "speedRound" && <Zap className="mr-1 h-3 w-3" />}
-              {slot.type === "code" && <Code2 className="mr-1 h-3 w-3" />}
-              {slot.type === "bugHunt" && <Bug className="mr-1 h-3 w-3" />}
-              {slot.type === "fillBlank" && <PenLine className="mr-1 h-3 w-3" />}
-              {slot.type === "mcq" && <ListChecks className="mr-1 h-3 w-3" />}
-              {slot.type === "codeAnalysis" && <Search className="mr-1 h-3 w-3" />}
-              {slot.type === "matching" && <Link2 className="mr-1 h-3 w-3" />}
-              {slot.type === "trueFalse" && <CheckCircle2 className="mr-1 h-3 w-3" />}
-              {slot.type === "conceptMap" && <Network className="mr-1 h-3 w-3" />}
-              {slot.type === "speedRound" ? "Speed Round" : slot.type}
-            </Badge>
-          ))}
-        </div>
-      </div>
+      {/* Exercise mix overview — n'affiche que les types réellement
+          jouables (composant branché plus bas). mcq/trueFalse/codeAnalysis
+          existent dans exercise-strategy.ts (pondération pour
+          pickNextExercise) mais n'ont pas d'UI dédiée : un badge affiché
+          ici sans rien de cliquable derrière serait trompeur. */}
+      {(() => {
+        const playableSlots = exerciseSlots.filter(s => s.type !== "mcq" && s.type !== "trueFalse" && s.type !== "codeAnalysis")
+        if (playableSlots.length === 0) return null
+        return (
+          <div className="rounded-lg border border-border/50 bg-muted/25 p-4">
+            <h2 className="text-sm font-semibold text-muted-foreground mb-2">Exercices disponibles</h2>
+            <div className="flex flex-wrap gap-2">
+              {playableSlots.map(slot => (
+                <Badge key={slot.type} variant="secondary" className="text-xs">
+                  {slot.type === "speedRound" && <Zap className="mr-1 h-3 w-3" />}
+                  {slot.type === "code" && <Code2 className="mr-1 h-3 w-3" />}
+                  {slot.type === "bugHunt" && <Bug className="mr-1 h-3 w-3" />}
+                  {slot.type === "fillBlank" && <PenLine className="mr-1 h-3 w-3" />}
+                  {slot.type === "matching" && <Link2 className="mr-1 h-3 w-3" />}
+                  {slot.type === "conceptMap" && <Network className="mr-1 h-3 w-3" />}
+                  {slot.type === "speedRound" ? "Speed Round" : slot.type}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Main sections */}
       <div className="space-y-4">
