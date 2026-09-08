@@ -22,6 +22,7 @@ interface ModelResult {
   ok: boolean
   lesson?: DetailedLesson
   error?: string
+  rawExcerpt?: string
   ms: number
 }
 
@@ -105,7 +106,14 @@ function ResultCard({ label, result }: { label: string; result: ModelResult | nu
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
         {!result && <p className="text-muted-foreground">En attente…</p>}
-        {result && !result.ok && <p className="text-destructive">{result.error}</p>}
+        {result && !result.ok && (
+          <div className="space-y-2">
+            <p className="text-destructive">{result.error}</p>
+            {result.rawExcerpt && (
+              <pre className="whitespace-pre-wrap break-all rounded bg-muted p-2 text-xs">{result.rawExcerpt}</pre>
+            )}
+          </div>
+        )}
         {result?.ok && result.lesson && (
           <>
             <div>

@@ -46,9 +46,10 @@ export async function POST(req: Request) {
 
   const runModel = async (model: 'claude-sonnet-5' | 'claude-haiku-4-5') => {
     const start = Date.now()
+    let text = ''
     try {
       // effort:medium n'existe que pour Sonnet — voir ai-client.ts.
-      const text = await callClaude({
+      text = await callClaude({
         model,
         prompt,
         maxTokens: 6000,
@@ -58,7 +59,15 @@ export async function POST(req: Request) {
       return { model, ok: true as const, lesson, ms: Date.now() - start }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)
-      return { model, ok: false as const, error: message, ms: Date.now() - start }
+      // "at position N" dans le message JSON.parse pointe l'octet fautif —
+      // en isolant le texte brut autour de là, on voit le caractère
+      // problématique sans avoir à rejouer l'appel avec des logs serveur.
+      // text reste '' si callClaude lui-même a échoué (avant tout parsing).
+      const posMatch = message.match(/position (\d+)/)
+      const rawExcerpt = posMatch && text
+        ? text.slice(Math.max(0, Number(posMatch[1]) - 80), Number(posMatch[1]) + 80)
+        : undefined
+      return { model, ok: false as const, error: message, rawExcerpt, ms: Date.now() - start }
     }
   }
 
