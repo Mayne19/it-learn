@@ -321,6 +321,21 @@ end;
 $$;
 ```
 
+## 3ter. `study_courses.exam_date` — planification des révisions
+
+Ajouté pour le calendrier de révisions (export `.ics`, voir
+`docs/etude-ai-architecture.md`) : date d'examen saisie manuellement par
+l'utilisateur sur chaque cours (pas d'extraction automatique depuis un
+PDF de planning — trop fragile à parser de façon fiable, préféré une
+saisie simple et exacte). `null` tant que l'examen n'est pas encore
+planifié — un cours sans date n'entre simplement pas dans le calcul de
+répartition des révisions.
+
+```sql
+alter table public.study_courses
+  add column if not exists exam_date date;
+```
+
 ## 3bis. `study_web_enrichment` — sources externes en cache
 
 Ajouté après §3 (voir `docs/etude-ai-architecture.md` pour le contexte

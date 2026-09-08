@@ -9,6 +9,9 @@ export interface StudyCourse {
   profile: CourseProfile
   detected_lang: Lang | null
   created_at: string
+  /** Date d'examen (YYYY-MM-DD), saisie manuellement — voir docs/db-anpassung.md §3ter.
+   * null tant que l'examen n'est pas encore planifié. */
+  exam_date: string | null
 }
 
 export type StudyCourseFileStatus = "pending" | "processing" | "done" | "error"

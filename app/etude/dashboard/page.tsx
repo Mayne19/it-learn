@@ -12,12 +12,15 @@ import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
 import {
   ArrowLeft, Plus, FileText, Trash2, AlertCircle,
-  CheckCircle2, BookOpen, FileUp, ArrowRight,
+  CheckCircle2, BookOpen, FileUp, ArrowRight, CalendarDays, Download,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getSupabaseClient } from "@/lib/supabase"
 import { getApiErrorMessage } from "@/lib/api-errors"
-import { listCourses, createCourse, deleteCourse, listFiles, uploadFile, deleteFile } from "@/lib/study/queries"
+import { listCourses, createCourse, deleteCourse, listFiles, uploadFile, deleteFile, setCourseExamDate } from "@/lib/study/queries"
+import { listAllStudyChaptersForUser } from "@/lib/study/lesson-queries"
+import { buildExamSchedule } from "@/lib/study/exam-schedule"
+import { buildICS } from "@/lib/study/ics-export"
 import { PROFILE_UI } from "@/lib/study/profile-ui"
 import type { CourseProfile, StudyCourse, StudyCourseFile } from "@/lib/study/types"
 
@@ -132,6 +135,62 @@ export default function EtudeDashboardManager() {
     e.preventDefault()
     setDragging(false)
     handleUpload(e.dataTransfer.files)
+  }
+
+  const [examDateDraft, setExamDateDraft] = useState<string>("")
+  const [savingExamDate, setSavingExamDate] = useState(false)
+  const [exporting, setExporting] = useState(false)
+
+  useEffect(() => {
+    setExamDateDraft(selectedCourse?.exam_date ?? "")
+  }, [selectedCourse])
+
+  async function handleSaveExamDate() {
+    if (!selectedCourse) return
+    clearMessages()
+    setSavingExamDate(true)
+    try {
+      const value = examDateDraft.trim() || null
+      await setCourseExamDate(selectedCourse.id, value)
+      setCourses(prev => prev.map(c => c.id === selectedCourse.id ? { ...c, exam_date: value } : c))
+      setSelectedCourse(prev => prev ? { ...prev, exam_date: value } : prev)
+      setSuccess(value ? "Date d'examen enregistrée." : "Date d'examen effacée.")
+    } catch (e) {
+      setError(getApiErrorMessage(e instanceof Error ? e.message : String(e)))
+    } finally {
+      setSavingExamDate(false)
+    }
+  }
+
+  // Génère le planning de révision et déclenche le téléchargement du
+  // .ics — pas de saveAs/lib externe : un blob + <a download> suffit
+  // pour un fichier texte simple comme l'iCalendar.
+  async function handleExportSchedule() {
+    if (!selectedCourse?.exam_date || !userId) return
+    clearMessages()
+    setExporting(true)
+    try {
+      const allChapters = await listAllStudyChaptersForUser(userId)
+      const courseChapters = allChapters.filter(c => c.study_course_id === selectedCourse.id)
+      const schedule = buildExamSchedule(courseChapters, selectedCourse.exam_date)
+      if (schedule.length === 0) {
+        setSuccess("Rien à planifier — tous les chapitres sont déjà maîtrisés, ou aucun chapitre généré pour ce cours.")
+        return
+      }
+      const ics = buildICS(selectedCourse.title, selectedCourse.exam_date, schedule)
+      const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${selectedCourse.title.replace(/\s+/g, "-")}-revisions.ics`
+      a.click()
+      URL.revokeObjectURL(url)
+      setSuccess(`Planning exporté — ${schedule.length} jour${schedule.length > 1 ? "s" : ""} de révision programmé${schedule.length > 1 ? "s" : ""}.`)
+    } catch (e) {
+      setError(getApiErrorMessage(e instanceof Error ? e.message : String(e)))
+    } finally {
+      setExporting(false)
+    }
   }
 
   return (
@@ -264,7 +323,45 @@ export default function EtudeDashboardManager() {
 
                 {/* Expanded file section */}
                 {isSelected && (
-                  <div className="ml-4 mt-2 space-y-3 border-l-2 border-ring/30 pl-4">
+                  <div className="ml-4 mt-2 space-y-4 border-l-2 border-ring/30 pl-4">
+                    {/* Date d'examen + export du planning de révision —
+                        saisie manuelle (voir docs/db-anpassung.md §3ter),
+                        pas d'extraction automatique depuis un planning
+                        PDF, trop fragile à parser de façon fiable. */}
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                        <CalendarDays className="h-3.5 w-3.5" /> Date d&apos;examen
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Input
+                          type="date"
+                          value={examDateDraft}
+                          onChange={e => setExamDateDraft(e.target.value)}
+                          className="w-auto"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSaveExamDate}
+                          disabled={savingExamDate || examDateDraft === (course.exam_date ?? "")}
+                        >
+                          {savingExamDate ? <Spinner className="size-4" /> : "Enregistrer"}
+                        </Button>
+                        {course.exam_date && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={handleExportSchedule}
+                            disabled={exporting}
+                          >
+                            {exporting ? <Spinner className="size-4" /> : <Download className="h-3.5 w-3.5" />}
+                            Exporter le planning de révision (.ics)
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
                     <h3 className="text-sm font-medium text-muted-foreground">
                       Fichiers ({files.length})
                     </h3>

@@ -74,6 +74,21 @@ export async function deleteCourse(studyCourseId: string): Promise<void> {
   }
 }
 
+/**
+ * Saisie manuelle de la date d'examen — voir docs/db-anpassung.md §3ter.
+ * examDate=null efface la date (examen pas encore planifié / annulé).
+ */
+export async function setCourseExamDate(studyCourseId: string, examDate: string | null): Promise<void> {
+  const { error } = await getSupabaseClient()
+    .from("study_courses")
+    .update({ exam_date: examDate })
+    .eq("id", studyCourseId)
+
+  if (error) {
+    throw new Error(`Impossible d'enregistrer la date d'examen: ${error.message}`)
+  }
+}
+
 export async function createStudyCourseFile(
   studyCourseId: string,
   filename: string,
