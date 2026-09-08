@@ -24,6 +24,7 @@ import { BugHunt } from "@/components/study/exercises/bug-hunt"
 import { ConceptMap } from "@/components/study/exercises/concept-map"
 import { FillBlank } from "@/components/study/exercises/fill-blank"
 import { CodeComplete } from "@/components/study/exercises/code-complete"
+import { WebEnrichmentView } from "@/components/study/web-enrichment-view"
 import { getExerciseSlots } from "@/lib/study/exercise-strategy"
 import type { StudyChapter } from "@/lib/study/types"
 import type { Lang } from "@/lib/chapters/types"
@@ -131,6 +132,7 @@ export default function StudyChapterPage({
           contenus d'apprentissage, pas des jeux à choisir. */}
       <div className="space-y-4">
         <DetailedLessonView chapter={chapter} lang={lang} />
+        <WebEnrichmentView chapter={chapter} />
         <FlashcardReview chapter={chapter} />
       </div>
 

@@ -50,6 +50,7 @@ Vérifier 1/2 : `select column_name from information_schema.columns where table_
 | `study_course_files` | PDF uploadés | `user_id` direct |
 | `study_chapters` | Chapitres extraits par l'IA | `user_id` direct |
 | `study_lessons_cache` | Cours détaillé généré, en cache | via jointure `study_chapters` |
+| `study_web_enrichment` | Sources externes (web_search) par chapitre, en cache — voir §3bis | via jointure `study_chapters` |
 | `study_flashcards` | Cartes de révision par chapitre | `user_id` direct |
 | `study_flashcards_progress` | Progression SM-2 par carte | `user_id` direct |
 | `study_exercise_history` | Historique des réponses au Speed Round, alimente pickNextExercise | `user_id` direct |
@@ -318,6 +319,47 @@ begin
   return v_count;
 end;
 $$;
+```
+
+## 3bis. `study_web_enrichment` — sources externes en cache
+
+Ajouté après §3 (voir `docs/etude-ai-architecture.md` pour le contexte
+complet) — "Pour aller plus loin" sur la page chapitre : 2-3 sources
+fiables trouvées via l'outil `web_search` de l'API Anthropic, en
+complément du contenu déjà extrait du PDF. Même principe que
+`study_lessons_cache` : générée une fois par chapitre, à la demande
+(bouton explicite, pas automatique), **jamais régénérée
+automatiquement**, cache partagé entre tous les utilisateurs (clé
+primaire = `study_chapter_id` seul, pas de `user_id`) — un chapitre déjà
+enrichi par un utilisateur ne coûte plus rien aux suivants.
+
+```sql
+create table if not exists public.study_web_enrichment (
+  study_chapter_id  uuid primary key references public.study_chapters(id) on delete cascade,
+  content           jsonb not null,
+  model             text not null,
+  generated_at      timestamptz not null default now()
+);
+
+alter table public.study_web_enrichment enable row level security;
+
+drop policy if exists "study_web_enrichment_via_chapter" on public.study_web_enrichment;
+create policy "study_web_enrichment_via_chapter"
+  on public.study_web_enrichment for all
+  using (
+    exists (
+      select 1 from public.study_chapters c
+      where c.id = study_web_enrichment.study_chapter_id
+        and c.user_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.study_chapters c
+      where c.id = study_web_enrichment.study_chapter_id
+        and c.user_id = auth.uid()
+    )
+  );
 ```
 
 ## 4. Vue de progression (`mastery_pct`, `next_review`)
