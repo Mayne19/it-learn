@@ -26,7 +26,10 @@ import { FillBlank } from "@/components/study/exercises/fill-blank"
 import { CodeComplete } from "@/components/study/exercises/code-complete"
 import { WebEnrichmentView } from "@/components/study/web-enrichment-view"
 import { StudyPhase } from "@/components/study/study-phase"
+import { TimeRing } from "@/components/study/time-ring"
 import { getExerciseSlots } from "@/lib/study/exercise-strategy"
+import { estimateChapterTime } from "@/lib/study/time-estimate"
+import { getCachedFlashcards } from "@/lib/study/flashcard-queries"
 import type { StudyChapter } from "@/lib/study/types"
 import type { Lang } from "@/lib/chapters/types"
 
@@ -57,6 +60,11 @@ export default function StudyChapterPage({
   // plus automatiquement.
   const [lessonOpened, setLessonOpened] = useState(false)
   const [flashcardsDone, setFlashcardsDone] = useState(false)
+  // Affine l'estimation de temps avec le vrai nombre de cartes une fois
+  // connu (lecture de cache, gratuite) — undefined tant que non chargé,
+  // estimateChapterTime retombe alors sur une estimation à partir du
+  // nombre de concepts.
+  const [realFlashcardCount, setRealFlashcardCount] = useState<number | undefined>(undefined)
 
   useEffect(() => {
     let cancelled = false
@@ -76,6 +84,18 @@ export default function StudyChapterPage({
     })
     return () => { cancelled = true }
   }, [params])
+
+  useEffect(() => {
+    if (!chapter) return
+    let cancelled = false
+    getCachedFlashcards(chapter.id)
+      .then(cards => { if (!cancelled && cards.length > 0) setRealFlashcardCount(cards.length) })
+      .catch(() => {
+        // Best-effort — l'estimation retombe sur le nombre de concepts,
+        // jamais bloquant pour l'affichage de la page.
+      })
+    return () => { cancelled = true }
+  }, [chapter])
 
   if (loading) {
     return (
@@ -108,6 +128,8 @@ export default function StudyChapterPage({
   const positionInCourse = allChapters.findIndex(c => c.id === chapter.id) + 1
   const totalChapters = allChapters.length
   const courseTitle = chapter.course_title
+  const timeEstimate = estimateChapterTime(chapter.concepts.length, chapter.profile, chapter.has_code, realFlashcardCount)
+  const phasesDone = (lessonOpened ? 1 : 0) + (flashcardsDone ? 1 : 0) + (visitedExercises.size > 0 ? 1 : 0)
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 space-y-10">
@@ -124,12 +146,15 @@ export default function StudyChapterPage({
           <span className="text-foreground">Chapitre {positionInCourse}</span>
         </nav>
 
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary" className="text-xs">{profileLabel}</Badge>
-            <Badge variant="outline" className="text-xs">Chapitre {positionInCourse}/{totalChapters}</Badge>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="text-xs">{profileLabel}</Badge>
+              <Badge variant="outline" className="text-xs">Chapitre {positionInCourse}/{totalChapters}</Badge>
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight text-balance">{chapter.title}</h1>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-balance">{chapter.title}</h1>
+          <TimeRing estimate={timeEstimate} phasesDone={phasesDone} className="flex-shrink-0" />
         </div>
       </div>
 
